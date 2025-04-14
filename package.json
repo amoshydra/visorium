@@ -3,15 +3,29 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "bin": {
+    "visorium": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
   "scripts": {
-    "dev": "tsx src/server/index.ts",
-    "build": "tsc -b && vite build",
+    "dev": "tsx src/cli/index.ts",
+    "build": "tsc && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "NODE_ENV=production node src/server/index.js"
   },
   "dependencies": {
+    "chalk": "^5.4.1",
+    "chokidar": "^4.0.3",
+    "commander": "^13.1.0",
     "express": "^5.1.0",
+    "immer": "^10.1.1",
+    "masonic": "^4.0.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "vite-express": "^0.20.0"
   },
   "devDependencies": {

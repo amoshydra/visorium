@@ -1,29 +1,36 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { type Express } from "express";
 import ViteExpress from "vite-express";
+import { Server } from "socket.io";
+import { createServer } from "node:http";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+  },
+});
 
-// Middleware
-app.use(express.json());
-
-// Type for API response
-interface ApiResponse {
-  message: string;
+export interface StartServerReturn {
+  app: Express;
+  port: number;
+  io: Server;
 }
-
-// API routes
-app.get("/api/hello", (req: Request, res: Response<ApiResponse>) => {
-  res.json({ message: "Hello from Express + TypeScript!" });
-});
-
-// Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Something broke!" });
-});
-
 // Start the server
-const port = process.env.PORT || 3000;
-ViteExpress.listen(app, port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+export const startServer = (optionPort = 3000) => {
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : optionPort;
+  ViteExpress.config({
+    viteConfigFile: join(__dirname, "../../vite.config.ts"),
+  });
+
+  return new Promise<StartServerReturn>((resolve) => {
+    const server = httpServer.listen(port, "0.0.0.0", () => {
+      resolve({ app, port, io });
+    });
+    ViteExpress.bind(app, server);
+  });
+};
