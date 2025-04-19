@@ -2,6 +2,7 @@ import { ReactElement } from "react";
 import { videoRegExp } from "../../shared/file-extension";
 import css from "./Media.module.css";
 import { MediaImage } from "./MediaImage";
+import { MediaVideo } from "./MediaVideo";
 
 interface MediaProp {
   src: string;
@@ -13,16 +14,7 @@ export const Media = ({ src, name, aspectRatio }: MediaProp) => {
   if (videoRegExp.test(name)) {
     return (
       <MediaItem label={name}>
-        <video
-          style={{ aspectRatio }}
-          playsInline
-          preload="metadata"
-          loop
-          autoPlay
-          muted
-          controls
-          src={src}
-        />
+        <MediaVideo aspectRatio={aspectRatio} src={src} alt={name} />
       </MediaItem>
     );
   }
