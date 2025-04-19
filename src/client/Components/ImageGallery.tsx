@@ -1,5 +1,5 @@
-import { Masonry } from "masonic";
-import { useFileServerSocket } from "../hooks/useFileServerSocket";
+import { Masonry, RenderComponentProps } from "masonic";
+import { MediaInfo, useFileServerSocket } from "../hooks/useFileServerSocket";
 import { Media } from "./Media";
 
 export function ImageGallery() {
@@ -23,6 +23,8 @@ export function ImageGallery() {
   );
 }
 
-const MasonryCard = ({ data: { name, src }, width }) => (
-  <Media name={name} src={src} />
+const MasonryCard = ({
+  data: { name, src, aspectRatio },
+}: RenderComponentProps<MediaInfo>) => (
+  <Media name={name} src={src} aspectRatio={aspectRatio} />
 );

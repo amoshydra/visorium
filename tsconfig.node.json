@@ -20,5 +20,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src/cli", "src/server"]
+  "include": ["src/cli", "src/server", "src/shared"]
 }

@@ -1,40 +1,54 @@
-import { CSSProperties } from "react";
+import { ReactElement } from "react";
+import { videoRegExp } from "../../shared/file-extension";
+import css from "./Media.module.css";
+import { MediaImage } from "./MediaImage";
 
 interface MediaProp {
   src: string;
   name: string;
-  style: CSSProperties;
+  aspectRatio: string | undefined;
 }
 
-const videoRegexp = /\.(mp4|mov)$/i;
-
-export const Media = ({ src, name, style }: MediaProp) => {
-  if (videoRegexp.test(name)) {
+export const Media = ({ src, name, aspectRatio }: MediaProp) => {
+  if (videoRegExp.test(name)) {
     return (
-      <figure className="media" style={style}>
-        <Caption label={name} />
+      <MediaItem label={name}>
         <video
+          style={{ aspectRatio }}
           playsInline
           preload="metadata"
           loop
           autoPlay
           muted
           controls
-          key={name}
           src={src}
         />
-      </figure>
+      </MediaItem>
     );
   }
 
   return (
-    <figure className="media" style={style}>
-      <Caption label={name} />
-      <img loading="lazy" src={src} alt={name} />
+    <MediaItem label={name}>
+      <MediaImage aspectRatio={aspectRatio} src={src} alt={name} />
+    </MediaItem>
+  );
+};
+
+const MediaItem = ({
+  children,
+  label,
+}: {
+  label: string;
+  children: ReactElement;
+}) => {
+  return (
+    <figure className={css.media}>
+      <Caption label={label} />
+      {children}
     </figure>
   );
 };
 
 const Caption = ({ label }: { label: string }) => {
-  return <figcaption>{label}</figcaption>;
+  return <figcaption className={css.label}>{label}</figcaption>;
 };

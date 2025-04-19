@@ -1,0 +1,21 @@
+.mediaImage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.mediaImageErrored {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    top: 0;
+    left: 0;
+    opacity: 0.5;
+}
+
+.mediaImageErrored img {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}

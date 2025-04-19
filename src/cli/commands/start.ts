@@ -3,17 +3,23 @@ import express from "express";
 import { startServer } from "../../server/index.js";
 import { FileEvent } from "../../shared/events.js";
 import { logger } from "../utils/logger.js";
+import { sep } from "node:path";
+import { Stats } from "node:fs";
+import { type FileInfo } from "../../shared/FileInfo";
+import { probeAspectRatio } from "../utils/media-prober.js";
+import { mediaRegExp } from "../../shared/file-extension.js";
 
 interface InitOptions {
   name?: string;
 }
 
-const mediaExtension = /\.(gif|webp|png|jpg|jpeg|mp4|mov)$/i;
-
 export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
   const watcher = chokidar.watch(".", {
-    ignored: (file, stats) => !!(stats?.isFile() && !mediaExtension.test(file)),
+    ignored: (file, stats) => {
+      if (file.includes(`${sep}node_modules${sep}`)) return true;
+      return !!(stats?.isFile() && !mediaRegExp.test(file));
+    },
     persistent: true,
     cwd: process.cwd(),
   });
@@ -22,21 +28,25 @@ export async function start(options: InitOptions) {
 
   logger.info(`Visorium server started on port ${port}`);
 
-  const fileSet = new Set();
+  const fileMap = new Map();
 
   const { promise, resolve } = withPromiseResolver<void>();
+
   watcher
-    .on("add", (path) => {
-      fileSet.add(path);
-      io.emit(FileEvent.Update, path);
+    .on("add", async (path, stat) => {
+      const fileEntry = await prepareFileEntry(path, stat);
+      fileMap.set(path, fileEntry);
+      io.emit(FileEvent.Update, fileEntry);
       logger.info(`File added: ${path}`);
     })
-    .on("change", (path) => {
-      io.emit(FileEvent.Update, path);
+    .on("change", async (path, stat) => {
+      const fileEntry = await prepareFileEntry(path, stat);
+      fileMap.set(path, fileEntry);
+      io.emit(FileEvent.Update, fileEntry);
       logger.info(`File changed: ${path}`);
     })
-    .on("unlink", (path) => {
-      fileSet.delete(path);
+    .on("unlink", async (path) => {
+      fileMap.delete(path);
       io.emit(FileEvent.Update, path);
       logger.info(`File removed: ${path}`);
     })
@@ -49,12 +59,22 @@ export async function start(options: InitOptions) {
     logger.info("Client connected");
     io.emit(FileEvent.Pending);
     await promise;
-    io.emit(FileEvent.Initial, Array.from(fileSet.values()));
+    io.emit(FileEvent.Initial, Array.from(fileMap.entries()));
     socket.on("disconnect", () => {
       logger.info("Client disconnected");
     });
   });
 }
+
+const prepareFileEntry = async (
+  path: string,
+  stat: Stats | undefined,
+): Promise<FileInfo> => {
+  return {
+    ar: await probeAspectRatio(path),
+    mt: stat?.mtimeMs || 0,
+  };
+};
 
 interface WithPromiseResolver<T> {
   promise: Promise<T>;
