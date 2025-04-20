@@ -24,6 +24,7 @@ export interface StartServerReturn {
 export const startServer = (optionPort = 3000) => {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : optionPort;
   ViteExpress.config({
+    mode: process.env.NODE_ENV === "development" ? "development" : "production",
     viteConfigFile: join(__dirname, "../../vite.config.ts"),
   });
 
