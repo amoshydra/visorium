@@ -1,6 +1,5 @@
 {
   "name": "visorium",
-  "private": true,
   "version": "0.0.0",
   "type": "module",
   "license": "GPL-3.0",
