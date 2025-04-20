@@ -18,16 +18,25 @@ const ImageWithFallback = ({
 }: MediaImageProps) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [imageRendering, setImageRendering] = useState<"auto" | "pixelated">(
+    "auto",
+  );
   return (
     <div className={css.mediaImage} style={{ aspectRatio }}>
       <img
+        style={{ imageRendering }}
         src={src}
         alt={alt}
         onError={() => {
           setError(true);
           setLoading(false);
         }}
-        onLoad={() => {
+        onLoad={({ currentTarget }) => {
+          setImageRendering(
+            currentTarget.clientWidth > currentTarget.naturalWidth
+              ? "pixelated"
+              : "auto",
+          );
           setLoading(false);
         }}
         {...props}
