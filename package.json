@@ -9,14 +9,15 @@
   },
   "files": [
     "bin",
+    "lib",
     "dist"
   ],
   "scripts": {
     "dev": "tsx src/cli/index.ts",
-    "build": "tsc && vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node src/server/index.js"
+    "start": "NODE_ENV=production node lib/cli/index.js"
   },
   "dependencies": {
     "@ffprobe-installer/ffprobe": "^2.1.2",

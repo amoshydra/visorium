@@ -1,4 +1,4 @@
-import { imageRegExp, videoRegExp } from "./file-extension";
+import { imageRegExp, videoRegExp } from "./file-extension.js";
 
 const contentTypeMap = new Map([
   // Video formats

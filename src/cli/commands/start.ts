@@ -1,21 +1,21 @@
 import chokidar from "chokidar";
 import express from "express";
+import { Stats } from "node:fs";
+import { sep } from "node:path";
+import { Time } from "time-chainer";
 import { startServer } from "../../server/index.js";
 import { FileEvent } from "../../shared/events.js";
-import { logger } from "../utils/logger.js";
-import { sep } from "node:path";
-import { Stats } from "node:fs";
-import { type FileInfo } from "../../shared/FileInfo";
-import { probeAspectRatio } from "../utils/media-prober.js";
 import { mediaRegExp } from "../../shared/file-extension.js";
+import { type FileInfo } from "../../shared/FileInfo.js";
 import { getMimeType } from "../../shared/mime.js";
-import { Time } from "time-chainer";
+import { logger } from "../utils/logger.js";
+import { probeAspectRatio } from "../utils/media-prober.js";
 
 interface InitOptions {
   name?: string;
 }
 
-export async function start(options: InitOptions) {
+export async function start(_options: InitOptions) {
   logger.info("Starting Visorium...");
   const watcher = chokidar.watch(".", {
     ignored: (file, stats) => {
@@ -102,5 +102,6 @@ const withPromiseResolver = <T>(): WithPromiseResolver<T> => {
     resolve = res;
     reject = rej;
   });
+  // @ts-ignore
   return { promise, resolve, reject };
 };
