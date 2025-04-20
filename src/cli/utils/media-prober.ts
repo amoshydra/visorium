@@ -1,7 +1,7 @@
 import ffprobeInstallerFfprobe from "@ffprobe-installer/ffprobe";
 import ffprobe from "ffprobe-client";
-import { imageRegExp, videoRegExp } from "../../shared/file-extension";
 import sharp from "sharp";
+import { imageRegExp, videoRegExp } from "../../shared/file-extension.js";
 
 type AspectRatio = `${number}/${number}`;
 
