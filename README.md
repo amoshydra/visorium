@@ -11,7 +11,7 @@
 <p align="center"><pre><code>npx visorium</code></pre></p>
 
 
-[![Visorium Preview](https://github.com/user-attachments/assets/11b2783f-e05a-4487-9bbe-d7dda4b30839)](https://github.com/user-attachments/assets/45a714e3-0ea7-428e-9f14-40e470f3f5c7)
+[![Visorium Preview](https://raw.githubusercontent.com/amoshydra/visorium/main/README.hero.jpg)](https://github.com/user-attachments/assets/45a714e3-0ea7-428e-9f14-40e470f3f5c7)
 
 
 ## Usage
