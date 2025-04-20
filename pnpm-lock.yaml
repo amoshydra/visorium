@@ -47,6 +47,9 @@ importers:
       time-chainer:
         specifier: ^0.1.1
         version: 0.1.1
+      vite:
+        specifier: ^6.3.2
+        version: 6.3.2(@types/node@22.14.1)(tsx@4.19.3)
       vite-express:
         specifier: ^0.20.0
         version: 0.20.0
@@ -68,7 +71,7 @@ importers:
         version: 19.1.2(@types/react@19.1.1)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.3.4(vite@6.2.6(@types/node@22.14.1)(tsx@4.19.3))
+        version: 4.3.4(vite@6.3.2(@types/node@22.14.1)(tsx@4.19.3))
       eslint:
         specifier: ^9.21.0
         version: 9.24.0
@@ -99,9 +102,6 @@ importers:
       typescript-eslint:
         specifier: ^8.24.1
         version: 8.29.1(eslint@9.24.0)(typescript@5.7.3)
-      vite:
-        specifier: ^6.2.6
-        version: 6.2.6(@types/node@22.14.1)(tsx@4.19.3)
 
 packages:
 
@@ -1203,6 +1203,14 @@ packages:
   fastq@1.19.1:
     resolution: {integrity: sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==}
 
+  fdir@6.4.4:
+    resolution: {integrity: sha512-1NZP+GK4GfuAv3PqKvxQRDMjdSRZjnkq7KfhlNrCNNlZ0ygQFpebfrnfnq/W7fpUnAv9aGWmY1zKx7FYL3gwhg==}
+    peerDependencies:
+      picomatch: ^3 || ^4
+    peerDependenciesMeta:
+      picomatch:
+        optional: true
+
   ffprobe-client@1.1.6:
     resolution: {integrity: sha512-n+wNlD9QC0nHsBUJGYljYAB1gwtuNxXQh0V4Am6M2T3h8Is7qR2hwrrC5Pjc9YNE4MpIslaQUe7+c9wPCarVJQ==}
 
@@ -1532,6 +1540,10 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
 
+  picomatch@4.0.2:
+    resolution: {integrity: sha512-M7BAV6Rlcy5u+m6oPhAPFgJTzAioX/6B0DxyvDlo9l8+T3nLKbrczg2WLUyzd45L8RqfUMyGPzekbMvX2Ldkwg==}
+    engines: {node: '>=12'}
+
   postcss@8.5.3:
     resolution: {integrity: sha512-dle9A3yYxlBSrt8Fu+IpjGT8SY8hN0mlaA6GY8t0P5PjIOZemULz/E2Bnm/2dcUOena75OTNkHI76uZBNUUq3A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1716,6 +1728,10 @@ packages:
   time-chainer@0.1.1:
     resolution: {integrity: sha512-xvxV+LwO35srHGWuYpRrBuJ6NDye8DiK8PlvktYjF8woBg5U0T7Lni5BidGYfOZVt20KFzc3RlTIVQ4L6xDUAg==}
 
+  tinyglobby@0.2.13:
+    resolution: {integrity: sha512-mEwzpUgrLySlveBwEVDMKk5B57bhLPYovRfPAXD5gA/98Opn0rCDj3GtLwFvCvH5RK9uPCExUROW5NjDwvqkxw==}
+    engines: {node: '>=12.0.0'}
+
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
@@ -1801,8 +1817,8 @@ packages:
   vite-express@0.20.0:
     resolution: {integrity: sha512-2HcPLoHFjSJIilDDLGstF2X9gxuitTPpAI012j7O6JpEPpcOFvz+lLoA+UlOJG030+uk7ZaWoyG1lC0h15/Ltg==}
 
-  vite@6.2.6:
-    resolution: {integrity: sha512-9xpjNl3kR4rVDZgPNdTL0/c6ao4km69a/2ihNQbcANz8RuCOK3hQBmLSJf3bRKVQjVMda+YvizNE8AwvogcPbw==}
+  vite@6.3.2:
+    resolution: {integrity: sha512-ZSvGOXKGceizRQIZSz7TGJ0pS3QLlVY/9hwxVh17W3re67je1RKYzFHivZ/t0tubU78Vkyb9WnHPENSBCzbckg==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
     peerDependencies:
@@ -2567,14 +2583,14 @@ snapshots:
       '@typescript-eslint/types': 8.29.1
       eslint-visitor-keys: 4.2.0
 
-  '@vitejs/plugin-react@4.3.4(vite@6.2.6(@types/node@22.14.1)(tsx@4.19.3))':
+  '@vitejs/plugin-react@4.3.4(vite@6.3.2(@types/node@22.14.1)(tsx@4.19.3))':
     dependencies:
       '@babel/core': 7.26.10
       '@babel/plugin-transform-react-jsx-self': 7.25.9(@babel/core@7.26.10)
       '@babel/plugin-transform-react-jsx-source': 7.25.9(@babel/core@7.26.10)
       '@types/babel__core': 7.20.5
       react-refresh: 0.14.2
-      vite: 6.2.6(@types/node@22.14.1)(tsx@4.19.3)
+      vite: 6.3.2(@types/node@22.14.1)(tsx@4.19.3)
     transitivePeerDependencies:
       - supports-color
 
@@ -2967,6 +2983,10 @@ snapshots:
     dependencies:
       reusify: 1.1.0
 
+  fdir@6.4.4(picomatch@4.0.2):
+    optionalDependencies:
+      picomatch: 4.0.2
+
   ffprobe-client@1.1.6: {}
 
   file-entry-cache@8.0.0:
@@ -3248,6 +3268,8 @@ snapshots:
 
   picomatch@2.3.1: {}
 
+  picomatch@4.0.2: {}
+
   postcss@8.5.3:
     dependencies:
       nanoid: 3.3.11
@@ -3526,6 +3548,11 @@ snapshots:
 
   time-chainer@0.1.1: {}
 
+  tinyglobby@0.2.13:
+    dependencies:
+      fdir: 6.4.4(picomatch@4.0.2)
+      picomatch: 4.0.2
+
   to-regex-range@5.0.1:
     dependencies:
       is-number: 7.0.0
@@ -3613,11 +3640,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  vite@6.2.6(@types/node@22.14.1)(tsx@4.19.3):
+  vite@6.3.2(@types/node@22.14.1)(tsx@4.19.3):
     dependencies:
       esbuild: 0.25.2
+      fdir: 6.4.4(picomatch@4.0.2)
+      picomatch: 4.0.2
       postcss: 8.5.3
       rollup: 4.40.0
+      tinyglobby: 0.2.13
     optionalDependencies:
       '@types/node': 22.14.1
       fsevents: 2.3.3
