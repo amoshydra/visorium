@@ -1,4 +1,4 @@
-import { ReactElement } from "react";
+import { HTMLProps, ReactElement } from "react";
 import { videoRegExp } from "../../shared/file-extension";
 import css from "./Media.module.css";
 import { MediaImage } from "./MediaImage";
@@ -13,28 +13,26 @@ interface MediaProp {
 export const Media = ({ src, name, aspectRatio }: MediaProp) => {
   if (videoRegExp.test(name)) {
     return (
-      <MediaItem label={name}>
+      <MediaItem label={name} data-label={name}>
         <MediaVideo aspectRatio={aspectRatio} src={src} alt={name} />
       </MediaItem>
     );
   }
 
   return (
-    <MediaItem label={name}>
+    <MediaItem label={name} data-label={name}>
       <MediaImage aspectRatio={aspectRatio} src={src} alt={name} />
     </MediaItem>
   );
 };
 
-const MediaItem = ({
-  children,
-  label,
-}: {
+interface MediaItemProps extends HTMLProps<HTMLElement> {
   label: string;
   children: ReactElement;
-}) => {
+}
+const MediaItem = ({ children, label, ...props }: MediaItemProps) => {
   return (
-    <figure className={css.media}>
+    <figure className={css.media} {...props}>
       <Caption label={label} />
       {children}
     </figure>

@@ -1,4 +1,4 @@
-import { useCallback, useState, VideoHTMLAttributes } from "react";
+import { VideoHTMLAttributes } from "react";
 
 export interface MediaVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
   aspectRatio?: string;
@@ -6,32 +6,35 @@ export interface MediaVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
 }
 
 export const MediaVideo = ({ aspectRatio, ...props }: MediaVideoProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const playThis = useCallback(
-    ({ currentTarget }: { currentTarget: HTMLVideoElement }) => {
-      document
-        .querySelectorAll('video[data-is-playing="true"]')
-        .forEach((e) => {
-          (e as HTMLVideoElement).pause();
-        });
-      currentTarget.play();
-      setIsPlaying(!currentTarget.paused);
-    },
-    [],
-  );
-
+  const params = new URLSearchParams(window.location.search);
+  const autoPlay = params.get("autoplay") === "true";
+  const muted = params.get("muted") === "true";
   return (
     <video
-      data-is-playing={isPlaying}
       style={{ aspectRatio }}
       playsInline
       preload="metadata"
       loop
+      muted={muted}
+      autoPlay={autoPlay}
       controls
       src={props.src}
+      onMouseEnter={({ currentTarget }) => {
+        document.querySelectorAll("video").forEach((element) => {
+          if (autoPlay) {
+            element.muted = true;
+          } else {
+            element.pause();
+          }
+        });
+        if (currentTarget.paused) {
+          currentTarget.play();
+          return;
+        } else {
+          currentTarget.muted = false;
+        }
+      }}
       {...props}
-      onMouseEnter={playThis}
     />
   );
 };

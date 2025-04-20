@@ -1,5 +1,6 @@
 .media {
     all: unset;
+    --label-height: 10px;
 }
 
 .media video,
@@ -8,14 +9,17 @@
     width: 100%;
     object-fit: contain;
     max-width: 100%;
-    max-height: calc(100vh - var(--control-bar-height) - 100px);
+    max-height: calc(100dvh - var(--label-height));
 }
 
 .label {
     font-family: monospace;
     overflow: hidden;
+    text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: block;
     width: 100%;
+    font-size: var(--label-height);
+    line-height: 1;
 }

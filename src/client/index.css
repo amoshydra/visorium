@@ -2,6 +2,7 @@ body {
     margin: 0;
     background: #0e0e0e;
     color: #999999;
+    min-height: 100.1lvh; /* always create a scrollbar */
 }
 * {
     box-sizing: border-box;

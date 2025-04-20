@@ -1,0 +1,56 @@
+.popover {
+    position: fixed;
+    top: var(--y);
+    left: var(--x);
+    top: 0;
+    left: 0;
+    width: 100dvw;
+    height: 100dvh;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.popoverContent {
+    pointer-events: auto;
+
+    padding: 1rem;
+    width: 480px;
+    max-width: 100%;
+    border-radius: 0.25rem;
+    background: rgba(22, 22, 22, 0.8);
+    backdrop-filter: blur(2px);
+    color: white;
+}
+
+.popoverCloseButton {
+    place-self: end;
+}
+
+.controller {
+    display: flex;
+    flex-direction: column;
+    row-gap: 1rem;
+}
+
+.controller label {
+    display: grid;
+    row-gap: 1rem;
+    width: 100%;
+}
+.controller label input {
+    width: 100%;
+}
+
+.fileList {
+    overflow: auto;
+    width: 100%;
+}
+.fileListItem {
+    font-family: monospace;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

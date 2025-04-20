@@ -40,13 +40,20 @@ export const useFileServerSocket = (): MediaInfo[] => {
   }, []);
 
   const files = useMemo(() => {
-    return Object.entries(record).map(
-      ([name, { ar: aspectRatio }]): MediaInfo => ({
-        src: `${location.origin}/files/${encodeURIComponent(name)}`,
-        name,
-        aspectRatio,
-      }),
-    );
+    return Object.entries(record)
+      .map(
+        ([name, { ar: aspectRatio }]): MediaInfo => ({
+          src: `${location.origin}/files/${name
+            .split("/")
+            .map((part) => encodeURIComponent(part))
+            .join("/")}`,
+          name,
+          aspectRatio,
+        }),
+      )
+      .sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
   }, [record]);
 
   return files;

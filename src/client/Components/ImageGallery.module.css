@@ -1,0 +1,11 @@
+.ImageGallery {
+}
+
+.ImageGalleryControlBar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: black;
+
+    height: var(--control-bar-height);
+}
