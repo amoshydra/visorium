@@ -65,7 +65,7 @@ export async function start(_options: InitOptions) {
       logger.info(`File removed: ${path}`);
     })
     .on("ready", () => {
-      logger.info("File watcher is ready");
+      logger.info(`Visorium is ready: http://localhost:${port}`);
       resolve();
     });
 
