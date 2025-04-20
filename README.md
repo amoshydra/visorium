@@ -1,54 +1,57 @@
-# React + TypeScript + Vite
+<h1 align="center">Visorium</h1>
+<p align="center">An HTTP Media Gallery as an NPM executable (NPX)</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<p align="center">
+    <a href="https://github.com/amoshydra/visorium"><img src="https://img.shields.io/badge/amoshydra-visorium-black?style=flat&logo=github" alt="Github Repository"><a>
+    <a href="https://www.npmjs.com/package/visorium"><img src="https://img.shields.io/npm/v/visorium" alt="NPM Version"><a>
+    <a href="https://www.npmjs.com/package/visorium?activeTab=code"><img src="https://img.shields.io/bundlephobia/minzip/visorium" alt="npm bundle size"><a>
+    <a href="https://github.com/amoshydra/visorium/blob/main/LICENSE"><img src="https://img.shields.io/github/license/amoshydra/visorium" alt="GitHub License"><a>
+</p>
 
-Currently, two official plugins are available:
+<p align="center"><pre><code>npx visorium</code></pre></p>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Expanding the ESLint configuration
+[Visorium Preview](https://github.com/user-attachments/assets/45a714e3-0ea7-428e-9f14-40e470f3f5c7)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Usage
+
+Nagivate to a directory containing images and videos. Then start Visorium:
+
+```
+cd ~/Pictures
+npx visorium
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+open [`http://localhost:3000`](http://localhost:3000) in your browser.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Detail
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+Visorium collect all images and video files and serves them in a gallery view.
+
+## Development
+
+```bash
+mkdir -p ~/projects/github.com/amoshydra
+cd ~/projects/github.com/amoshydra
+git clone git@github.com:amoshydra/visorium.git
+cd visorium
+pnpm i
+```
+
+navigate to a folder containing image and video files
+
+```bash
+NODE_ENV=development npx ~/projects/github.com/amoshydra/visorium
+```
+
+### Building demo app
+
+The demo app is used as a preview in https://amoshydra.github.io/visorium.
+
+Instead of running file server, this demo app shows a list of images and videos from pexels.
+
+```bash
+VITE_VISORIUM_MODE=demo pnpm build
+pnpm preview
 ```
