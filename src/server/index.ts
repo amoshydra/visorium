@@ -23,10 +23,23 @@ export interface StartServerReturn {
 // Start the server
 export const startServer = (optionPort = 3000) => {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : optionPort;
-  ViteExpress.config({
-    mode: process.env.NODE_ENV === "development" ? "development" : "production",
-    viteConfigFile: join(__dirname, "../../vite.config.ts"),
-  });
+
+  if (process.env.NODE_ENV === "development") {
+    ViteExpress.config({
+      viteConfigFile: join(__dirname, "../../vite.config.ts"),
+    });
+  } else {
+    ViteExpress.config({
+      mode: "production",
+      inlineViteConfig: {
+        root: join(__dirname, "../.."),
+        base: process.env.BASE_URL,
+      },
+    });
+    // Serve static files from the dist directory
+    // somehow vite-express does not serve files from the dist directory
+    app.use("/", express.static(join(__dirname, "../../dist")));
+  }
 
   return new Promise<StartServerReturn>((resolve) => {
     const server = httpServer.listen(port, "0.0.0.0", () => {
