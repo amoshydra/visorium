@@ -8,6 +8,8 @@ import { Stats } from "node:fs";
 import { type FileInfo } from "../../shared/FileInfo";
 import { probeAspectRatio } from "../utils/media-prober.js";
 import { mediaRegExp } from "../../shared/file-extension.js";
+import { getMimeType } from "../../shared/mime.js";
+import { Time } from "time-chainer";
 
 interface InitOptions {
   name?: string;
@@ -24,7 +26,19 @@ export async function start(options: InitOptions) {
     cwd: process.cwd(),
   });
   const { app, port, io } = await startServer();
-  app.use("/files", express.static(process.cwd()));
+  app.use(
+    "/files",
+    express.static(process.cwd(), {
+      setHeaders: (res, path) => {
+        const contentType = getMimeType(path);
+        if (contentType) {
+          res.setHeader("Content-Type", contentType);
+        }
+      },
+      dotfiles: "allow",
+      maxAge: Time.days(1),
+    }),
+  );
 
   logger.info(`Visorium server started on port ${port}`);
 

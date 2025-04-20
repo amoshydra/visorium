@@ -1,18 +1,18 @@
 .media {
-    margin: 0;
-    font-family: monospace;
+    all: unset;
 }
 
 .media video,
 .media img {
-    object-fit: cover;
     height: 100%;
     width: 100%;
+    object-fit: contain;
     max-width: 100%;
-    max-height: 100%;
+    max-height: calc(100vh - var(--control-bar-height) - 100px);
 }
 
 .label {
+    font-family: monospace;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
