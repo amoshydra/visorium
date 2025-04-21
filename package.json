@@ -21,6 +21,10 @@
   },
   "dependencies": {
     "@ffprobe-installer/ffprobe": "^2.1.2",
+    "@react-three/drei": "^10.0.6",
+    "@react-three/fiber": "^9.1.2",
+    "@react-three/xr": "^6.6.14",
+    "@types/three": "^0.175.0",
     "chalk": "^5.4.1",
     "chokidar": "^4.0.3",
     "commander": "^13.1.0",
