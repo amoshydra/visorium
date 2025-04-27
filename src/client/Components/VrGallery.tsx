@@ -1,12 +1,10 @@
 import { Text } from "@react-three/drei";
-import { useCallback, useRef, useState } from "react";
-import { Mesh } from "three";
+import { useCallback, useState } from "react";
 import { useFileServerSocket } from "../hooks/useFileServerSocket";
 import { Controllers } from "./Vr/Controllers";
 import { MediaRouter } from "./Vr/MediaItem/MediaRouter";
 
 export const VrGallery = () => {
-  const meshRef = useRef<Mesh>(null);
   const [index, setIndex] = useState(0);
   const files = useFileServerSocket();
   const file = files[index];
@@ -65,7 +63,7 @@ export const VrGallery = () => {
           </Text>
         </mesh>
       </mesh>
-      <mesh position={[0, 1, -1]}>
+      <mesh position={[0, 1.5, -1]}>
         <MediaRouter
           file={file}
           position={meshPosition}
