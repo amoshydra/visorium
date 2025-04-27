@@ -1,5 +1,6 @@
 import { useTexture } from "@react-three/drei";
 import { Suspense } from "react";
+import { DoubleSide } from "three";
 import { MediaMessage } from "../MediaMessage";
 import { MediaComponent } from "./interface";
 
@@ -18,12 +19,10 @@ const InternalMediaImage: MediaComponent = ({ file, ...props }) => {
   return (
     <mesh {...props}>
       <planeGeometry args={[r, 1]} />
-      <meshStandardMaterial
-        emissiveIntensity={1}
-        emissive={"white"}
+      <meshBasicMaterial
         map={texture}
-        emissiveMap={texture}
-        metalness={1}
+        side={DoubleSide} // Render both sides (optional)
+        toneMapped={false} // Often desirable for direct image display
       />
     </mesh>
   );
