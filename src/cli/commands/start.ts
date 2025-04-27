@@ -12,20 +12,25 @@ import { logger } from "../utils/logger.js";
 import { probeAspectRatio } from "../utils/media-prober.js";
 
 interface InitOptions {
-  name?: string;
+  port: string;
+  ext: string[];
 }
 
-export async function start(_options: InitOptions) {
+export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
   const watcher = chokidar.watch(".", {
     ignored: (file, stats) => {
       if (file.includes(`${sep}node_modules${sep}`)) return true;
-      return !!(stats?.isFile() && !mediaRegExp.test(file));
+      return !!(
+        stats?.isFile() &&
+        !mediaRegExp.test(file) &&
+        !options.ext.some((ext) => file.endsWith(ext))
+      );
     },
     persistent: true,
     cwd: process.cwd(),
   });
-  const { app, port, io } = await startServer();
+  const { app, port, io } = await startServer(parseInt(options.port, 10));
   app.use(
     "/files",
     express.static(process.cwd(), {
