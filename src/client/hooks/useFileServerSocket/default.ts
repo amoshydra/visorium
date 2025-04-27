@@ -27,6 +27,13 @@ export const useFileServerSocket = (): MediaInfo[] => {
         });
       },
     );
+    socketInstance.on(FileEvent.Delete, (newFile: string) => {
+      setRecord((record) => {
+        const temp = { ...record };
+        delete temp[newFile];
+        return temp;
+      });
+    });
     return () => {
       socketInstance.disconnect();
     };

@@ -61,7 +61,7 @@ export async function start(_options: InitOptions) {
     })
     .on("unlink", async (path) => {
       fileMap.delete(path);
-      io.emit(FileEvent.Update, path);
+      io.emit(FileEvent.Delete, path);
       logger.info(`File removed: ${path}`);
     })
     .on("ready", () => {
