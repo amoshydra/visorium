@@ -4,12 +4,15 @@ import {
   imageRegExp,
   videoRegExp,
 } from "../../../../shared/file-extension";
+import { stereoRegExp } from "../../../../shared/stereo-extension";
 import { MediaInfo } from "../../../hooks/useFileServerSocket.types";
 import { MediaMessage } from "../MediaMessage";
 import { MediaComponent, MediaComponentProps } from "./interface";
 import { MediaImage } from "./MediaImage";
+import { MediaImageStereo } from "./MediaImageStereo";
 import { MediaThreeDimensional } from "./MediaThreeDimensional";
 import { MediaVideo } from "./MediaVideo";
+import { MediaVideoStereo } from "./MediaVideoStereo";
 
 export interface MediaRouterProps extends Omit<MediaComponentProps, "file"> {
   file: MediaInfo | null;
@@ -41,9 +44,15 @@ const getMediaComponent = (file: MediaInfo): MediaComponent => {
     return MediaThreeDimensional;
   }
   if (imageRegExp.test(file.name)) {
+    if (stereoRegExp.test(file.name)) {
+      return MediaImageStereo;
+    }
     return MediaImage;
   }
   if (videoRegExp.test(file.name)) {
+    if (stereoRegExp.test(file.name)) {
+      return MediaVideoStereo;
+    }
     return MediaVideo;
   }
 
