@@ -1,9 +1,9 @@
-import { Environment, useGLTF } from "@react-three/drei";
-import { Ref, useCallback, useRef, useState } from "react";
+import { Text } from "@react-three/drei";
+import { useCallback, useRef, useState } from "react";
 import { Mesh } from "three";
 import { useFileServerSocket } from "../hooks/useFileServerSocket";
-import { MediaInfo } from "../hooks/useFileServerSocket.types";
 import { Controllers } from "./Vr/Controllers";
+import { MediaRouter } from "./Vr/MediaItem/MediaRouter";
 
 export const VrGallery = () => {
   const meshRef = useRef<Mesh>(null);
@@ -11,22 +11,32 @@ export const VrGallery = () => {
   const files = useFileServerSocket();
   const file = files[index];
 
+  const [meshRotation, setMeshRotation] = useState<[number, number, number]>([
+    0, 0, 0,
+  ]);
+  const [meshPosition, setMeshPosition] = useState<[number, number, number]>([
+    0, 0, 0,
+  ]);
+  const [meshScale, setMeshScale] = useState<[number, number, number]>([
+    1, 1, 1,
+  ]);
+
+  const fileLength = files.length;
+
   const onButtonPress = useCallback(
     (id: "l1" | "l2" | "r1" | "r2") => {
       switch (id) {
         case "l1":
         case "r1":
           setIndex((prev) => {
-            const newIndex = (prev - 1 + files.length) % files.length;
-            if (!files[newIndex]) return 0;
+            const newIndex = (prev - 1 + fileLength) % fileLength;
             return newIndex;
           });
           break;
         case "l2":
         case "r2":
           setIndex((prev) => {
-            const newIndex = (prev + 1) % files.length;
-            if (!files[newIndex]) return 0;
+            const newIndex = (prev + 1) % fileLength;
             return newIndex;
           });
           break;
@@ -34,36 +44,41 @@ export const VrGallery = () => {
           break;
       }
     },
-    [files],
+    [fileLength],
   );
 
   return (
     <>
-      <Controllers modelRef={meshRef} onButtonPress={onButtonPress} />
+      <Controllers
+        onButtonPress={onButtonPress}
+        onRotationChange={setMeshRotation}
+        onPositionChange={setMeshPosition}
+        onScaleChange={setMeshScale}
+      />
 
-      <mesh position={[0, 0.5, -1]} scale={[0.5, 0.5, 0.5]}>
-        {/* Load the 3D model */}
-        {file && <Model ref={meshRef} file={file} />}
+      <mesh rotation={[0, 1, 0]}>
+        <mesh position={[0, 1, -1]} scale={[0.02, 0.02, 0.02]}>
+          <Text fontSize={1}>
+            {files
+              .map((f) => `${file.name === f.name ? "> " : "  "} ${f.name}`)
+              .join("\n")}
+          </Text>
+        </mesh>
       </mesh>
-
-      {/* Add environment mapping for better lighting */}
-      <Environment preset="studio" />
+      <mesh position={[0, 1, -1]}>
+        <MediaRouter
+          file={file}
+          position={meshPosition}
+          scale={meshScale}
+          rotation={meshRotation}
+        />
+      </mesh>
+      <hemisphereLight
+        castShadow
+        color={0xf0f0f0}
+        groundColor={0x242424}
+        intensity={1}
+      />
     </>
   );
 };
-
-// Component to load and display the 3D model
-interface ModelProps {
-  file: MediaInfo;
-  ref: Ref<Mesh>;
-}
-
-const v = Math.random();
-function Model({ file, ref }: ModelProps) {
-  const { scene } = useGLTF(file.src + "?v=" + v);
-  return (
-    <mesh ref={ref}>
-      <primitive object={scene} />
-    </mesh>
-  );
-}

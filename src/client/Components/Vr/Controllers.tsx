@@ -1,19 +1,25 @@
 import { useFrame } from "@react-three/fiber";
-import { useXRInputSourceState, XROrigin } from "@react-three/xr";
-import { RefObject, useRef } from "react";
-import type { Group, Mesh } from "three";
+import { useXRInputSourceState } from "@react-three/xr";
+import { useRef } from "react";
 
 type ButtonId = "l1" | "l2" | "r1" | "r2";
+type Vector3Liked = [x: number, y: number, z: number];
 
 export interface ControllersProps {
-  modelRef: RefObject<Mesh | null>;
   onButtonPress: (id: ButtonId) => void;
+  onPositionChange: (setter: (position: Vector3Liked) => Vector3Liked) => void;
+  onScaleChange: (setter: (scale: Vector3Liked) => Vector3Liked) => void;
+  onRotationChange: (setter: (rotation: Vector3Liked) => Vector3Liked) => void;
 }
 
-export function Controllers({ modelRef, onButtonPress }: ControllersProps) {
+export function Controllers({
+  onButtonPress,
+  onScaleChange,
+  onPositionChange,
+  onRotationChange,
+}: ControllersProps) {
   const leftController = useXRInputSourceState("controller", "left");
   const rightController = useXRInputSourceState("controller", "right");
-  const ref = useRef<Group>(null);
 
   const buttonMap = useRef({
     l1: false,
@@ -43,8 +49,6 @@ export function Controllers({ modelRef, onButtonPress }: ControllersProps) {
   };
 
   useFrame((_, delta) => {
-    if (modelRef.current == null || ref.current == null) return;
-
     if (leftController) {
       const thumstickState = leftController.gamepad["xr-standard-thumbstick"];
       const squeezeState = leftController.gamepad["xr-standard-squeeze"];
@@ -57,13 +61,23 @@ export function Controllers({ modelRef, onButtonPress }: ControllersProps) {
       if (squeezeState?.state === "pressed") {
         if (thumstickState) {
           const s = (thumstickState.yAxis ?? 0) * delta;
-          modelRef.current.scale.x -= s;
-          modelRef.current.scale.y -= s;
-          modelRef.current.scale.z -= s;
+          onScaleChange((previousScale) => {
+            return [
+              previousScale[0] - s,
+              previousScale[1] - s,
+              previousScale[2] - s,
+            ];
+          });
         }
       } else {
         if (thumstickState) {
-          modelRef.current.position.y -= (thumstickState.yAxis ?? 0) * delta;
+          onPositionChange((previousPosition) => {
+            return [
+              previousPosition[0],
+              previousPosition[1] + (thumstickState.yAxis ?? 0) * delta,
+              previousPosition[2],
+            ];
+          });
         }
       }
     }
@@ -78,15 +92,26 @@ export function Controllers({ modelRef, onButtonPress }: ControllersProps) {
 
       if (squeezeState?.state === "pressed") {
         if (thumstickState) {
-          modelRef.current.rotation.y += (thumstickState.xAxis ?? 0) * delta;
+          onRotationChange((previousRotation) => {
+            return [
+              previousRotation[0],
+              previousRotation[1] + (thumstickState.xAxis ?? 0) * delta,
+              previousRotation[2],
+            ];
+          });
         }
       } else {
         if (thumstickState != null) {
-          modelRef.current.position.x += (thumstickState.xAxis ?? 0) * delta;
-          modelRef.current.position.z += (thumstickState.yAxis ?? 0) * delta;
+          onPositionChange((previousPosition) => {
+            return [
+              previousPosition[0] + (thumstickState.xAxis ?? 0) * delta,
+              previousPosition[1],
+              previousPosition[2] + (thumstickState.yAxis ?? 0) * delta,
+            ];
+          });
         }
       }
     }
   });
-  return <XROrigin ref={ref} />;
+  return null;
 }

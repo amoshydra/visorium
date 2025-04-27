@@ -25,6 +25,7 @@ export const videoExtensions = [
   "3gp",
   "3g2",
 ];
+export const gltfExtensions = ["glft", "glb"];
 
 const toPattern = (extensions: string[]) => {
   return new RegExp(`\\.(${extensions.join("|")})$`, "i");
@@ -32,4 +33,5 @@ const toPattern = (extensions: string[]) => {
 
 export const imageRegExp = toPattern(imageExtensions);
 export const videoRegExp = toPattern(videoExtensions);
+export const gltfRegExp = toPattern(gltfExtensions);
 export const mediaRegExp = toPattern([...imageExtensions, ...videoExtensions]);

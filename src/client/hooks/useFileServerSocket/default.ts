@@ -1,4 +1,3 @@
-import { produce } from "immer";
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { FileEvent } from "../../../shared/events";
@@ -22,11 +21,12 @@ export const useFileServerSocket = (): MediaInfo[] => {
     });
     socketInstance.on(
       FileEvent.Update,
-      ([newFile, lastModified]: ServerFileEntry) => {
+      ([newFile, fileInfo]: ServerFileEntry) => {
         setRecord((record) => {
-          return produce(record, (draft) => {
-            draft[newFile] = lastModified;
-          });
+          return {
+            ...record,
+            [newFile]: fileInfo,
+          };
         });
       },
     );
