@@ -41,8 +41,8 @@ export const useFileServerSocket = (): MediaInfo[] => {
 
   const files = useMemo(() => {
     return Object.entries(record).map(
-      ([name, { ar: aspectRatio }]): MediaInfo => ({
-        src: `${location.origin}/files/${encodeURIComponent(name)}`,
+      ([name, { ar: aspectRatio, mt: modifiedTime }]): MediaInfo => ({
+        src: `${location.origin}/files/${encodeURIComponent(name)}?t=${modifiedTime}`,
         name,
         aspectRatio,
       }),
