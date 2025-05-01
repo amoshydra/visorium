@@ -1,7 +1,7 @@
-import { Text } from "@react-three/drei";
 import { useCallback, useState } from "react";
 import { useFileServerSocket } from "../hooks/useFileServerSocket";
 import { Controllers } from "./Vr/Controllers";
+import { FileExplorer } from "./Vr/FileExplorer";
 import { MediaRouter } from "./Vr/MediaItem/MediaRouter";
 
 export const VrGallery = () => {
@@ -54,15 +54,8 @@ export const VrGallery = () => {
         onScaleChange={setMeshScale}
       />
 
-      <mesh rotation={[0, 1, 0]}>
-        <mesh position={[0, 1, -1]} scale={[0.02, 0.02, 0.02]}>
-          <Text fontSize={1}>
-            {files
-              .map((f) => `${file.name === f.name ? "> " : "  "} ${f.name}`)
-              .join("\n")}
-          </Text>
-        </mesh>
-      </mesh>
+      <FileExplorer files={files} index={index} position={[-1, 1.75, -0.5]} />
+
       <mesh position={[0, 1.5, -1]}>
         <MediaRouter
           file={file}
