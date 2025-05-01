@@ -1,6 +1,6 @@
-import sharp from "sharp";
 import { imageRegExp, videoRegExp } from "../../shared/file-extension.js";
 import { ffprobe } from "./ffprobe.js";
+import { sharp } from "./sharp.js";
 
 type AspectRatio = `${number}/${number}`;
 

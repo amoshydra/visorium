@@ -27,7 +27,6 @@
     "immer": "^10.1.1",
     "masonic": "^4.0.1",
     "react-error-boundary": "^5.0.0",
-    "sharp": "^0.34.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "time-chainer": "^0.1.1",
@@ -55,6 +54,7 @@
   },
   "optionalDependencies": {
     "@ffprobe-installer/ffprobe": "^2.1.2",
+    "sharp": "^0.34.1",
     "ffprobe-client": "^1.1.6"
   },
   "pnpm": {
