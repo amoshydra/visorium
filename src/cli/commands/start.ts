@@ -55,13 +55,13 @@ export async function start(options: InitOptions) {
     .on("add", async (path, stat) => {
       const fileEntry = await prepareFileEntry(path, stat);
       fileMap.set(path, fileEntry);
-      io.emit(FileEvent.Update, fileEntry);
+      io.emit(FileEvent.Update, [path, fileEntry]);
       logger.info(`File added: ${path}`);
     })
     .on("change", async (path, stat) => {
       const fileEntry = await prepareFileEntry(path, stat);
       fileMap.set(path, fileEntry);
-      io.emit(FileEvent.Update, fileEntry);
+      io.emit(FileEvent.Update, [path, fileEntry]);
       logger.info(`File changed: ${path}`);
     })
     .on("unlink", async (path) => {
