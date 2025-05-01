@@ -11,6 +11,9 @@ export const useFileServerSocket = (): MediaInfo[] => {
   useEffect(() => {
     // Initialize socket connection
     const socketInstance = io(window.location.origin);
+    socketInstance.on(FileEvent.Pending, () => {
+      setRecord({});
+    });
     socketInstance.on(FileEvent.Initial, (initialFiles: ServerFileEntry[]) => {
       const newRecord = Object.fromEntries(
         initialFiles.map(([path, v]) => [path, v]),
@@ -40,13 +43,15 @@ export const useFileServerSocket = (): MediaInfo[] => {
   }, []);
 
   const files = useMemo(() => {
-    return Object.entries(record).map(
-      ([name, { ar: aspectRatio, mt: modifiedTime }]): MediaInfo => ({
-        src: `${location.origin}/files/${encodeURIComponent(name)}?t=${modifiedTime}`,
-        name,
-        aspectRatio,
-      }),
-    );
+    return Object.entries(record)
+      .sort(([, { t: a }], [, { t: b }]) => a - b)
+      .map(
+        ([name, { ar: aspectRatio, mt: modifiedTime }]): MediaInfo => ({
+          src: `${location.origin}/files/${encodeURIComponent(name)}?t=${modifiedTime}`,
+          name,
+          aspectRatio,
+        }),
+      );
   }, [record]);
 
   return files;

@@ -16,20 +16,11 @@ interface InitOptions {
   ext: string[];
 }
 
+let counter = 0;
+
 export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
-  const watcher = chokidar.watch(".", {
-    ignored: (file, stats) => {
-      if (file.includes(`${sep}node_modules${sep}`)) return true;
-      return !!(
-        stats?.isFile() &&
-        !mediaRegExp.test(file) &&
-        !options.ext.some((ext) => file.endsWith(ext))
-      );
-    },
-    persistent: true,
-    cwd: process.cwd(),
-  });
+
   const { app, port, io } = await startServer(parseInt(options.port, 10));
   app.use(
     "/files",
@@ -44,54 +35,73 @@ export async function start(options: InitOptions) {
       maxAge: Time.days(1),
     }),
   );
-
   logger.info(`Visorium server started on port ${port}`);
 
-  const fileMap = new Map();
-
-  const { promise, resolve } = withPromiseResolver<void>();
-
-  watcher
-    .on("add", async (path, stat) => {
-      const fileEntry = await prepareFileEntry(path, stat);
-      fileMap.set(path, fileEntry);
-      io.emit(FileEvent.Update, [path, fileEntry]);
-      logger.info(`File added: ${path}`);
-    })
-    .on("change", async (path, stat) => {
-      const fileEntry = await prepareFileEntry(path, stat);
-      fileMap.set(path, fileEntry);
-      io.emit(FileEvent.Update, [path, fileEntry]);
-      logger.info(`File changed: ${path}`);
-    })
-    .on("unlink", async (path) => {
-      fileMap.delete(path);
-      io.emit(FileEvent.Delete, path);
-      logger.info(`File removed: ${path}`);
-    })
-    .on("ready", () => {
-      logger.info(`Visorium is ready: http://localhost:${port}`);
-      resolve();
+  setTimeout(() => {
+    const watcher = chokidar.watch(".", {
+      ignored: (file, stats) => {
+        if (file.includes(`${sep}node_modules${sep}`)) return true;
+        return !!(
+          stats?.isFile() &&
+          !mediaRegExp.test(file) &&
+          !options.ext.some((ext) => file.endsWith(ext))
+        );
+      },
+      persistent: true,
+      cwd: process.cwd(),
     });
 
-  io.on("connection", async (socket) => {
-    logger.info("Client connected");
-    io.emit(FileEvent.Pending);
-    await promise;
-    io.emit(FileEvent.Initial, Array.from(fileMap.entries()));
-    socket.on("disconnect", () => {
-      logger.info("Client disconnected");
+    const fileMap = new Map<string, FileInfo>();
+
+    const { promise, resolve } = withPromiseResolver<void>();
+
+    watcher
+      .on("add", async (path, stat) => {
+        const t = counter++;
+        const fileEntry = await prepareFileEntry(path, stat, t);
+        fileMap.set(path, fileEntry);
+        io.emit(FileEvent.Update, [path, fileEntry]);
+        logger.info(`File added: ${path}`);
+      })
+      .on("change", async (path, stat) => {
+        const t = fileMap.get(path)?.t ?? counter++;
+        const fileEntry = await prepareFileEntry(path, stat, t);
+
+        fileMap.set(path, fileEntry);
+        io.emit(FileEvent.Update, [path, fileEntry]);
+        logger.info(`File changed: ${path}`);
+      })
+      .on("unlink", async (path) => {
+        fileMap.delete(path);
+        io.emit(FileEvent.Delete, path);
+        logger.info(`File removed: ${path}`);
+      })
+      .on("ready", () => {
+        logger.info(`Visorium is ready: http://localhost:${port}`);
+        resolve();
+      });
+
+    io.on("connection", async (socket) => {
+      logger.info("Client connected");
+      io.emit(FileEvent.Pending);
+      await promise;
+      io.emit(FileEvent.Initial, Array.from(fileMap.entries()));
+      socket.on("disconnect", () => {
+        logger.info("Client disconnected");
+      });
     });
-  });
+  }, 2000);
 }
 
 const prepareFileEntry = async (
   path: string,
   stat: Stats | undefined,
+  t: number,
 ): Promise<FileInfo> => {
   return {
     ar: await probeAspectRatio(path),
     mt: stat?.mtimeMs || 0,
+    t,
   };
 };
 
