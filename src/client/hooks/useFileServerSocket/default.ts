@@ -1,11 +1,18 @@
 import { produce } from "immer";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { FileEvent } from "../../../shared/events";
 import type { FileInfo } from "../../../shared/FileInfo";
 import type { MediaInfo, ServerFileEntry } from "../useFileServerSocket.types";
 
-export const useFileServerSocket = (): MediaInfo[] => {
+const params = new URLSearchParams(window.location.search);
+const defaultSearch = params.get("search") || "";
+const defaultOrder = params.get("order") === "desc" ? "desc" : "asc";
+
+export const useFileServerSocket = (
+  search = defaultSearch,
+  order = defaultOrder,
+): MediaInfo[] => {
   const [record, setRecord] = useState<Record<string, FileInfo>>({});
 
   useEffect(() => {
@@ -42,9 +49,27 @@ export const useFileServerSocket = (): MediaInfo[] => {
     };
   }, []);
 
+  const deferredSearch = useDeferredValue(search || "");
+
   const files = useMemo(() => {
+    const regexp = deferredSearch ? new RegExp(deferredSearch) : null;
+    const filter = regexp
+      ? ([name]: [string, unknown]) => regexp.test(name)
+      : () => true;
+    const sort =
+      order === "desc"
+        ? (
+            [, { t: a }]: [unknown, { t: number }],
+            [, { t: b }]: [unknown, { t: number }],
+          ) => b - a
+        : (
+            [, { t: a }]: [unknown, { t: number }],
+            [, { t: b }]: [unknown, { t: number }],
+          ) => a - b;
+
     return Object.entries(record)
-      .sort(([, { t: a }], [, { t: b }]) => a - b)
+      .filter(filter)
+      .sort(sort)
       .map(
         ([name, { ar: aspectRatio, mt: modifiedTime }]): MediaInfo => ({
           src: `${location.origin}/files/${encodeURIComponent(name)}?t=${modifiedTime}`,
@@ -52,7 +77,7 @@ export const useFileServerSocket = (): MediaInfo[] => {
           aspectRatio,
         }),
       );
-  }, [record]);
+  }, [record, order, deferredSearch]);
 
   return files;
 };

@@ -1,0 +1,8 @@
+.imageGalleryPlaceholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #666;
+    padding: 2rem;
+}
