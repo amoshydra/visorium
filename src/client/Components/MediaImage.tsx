@@ -1,8 +1,9 @@
 import { ImgHTMLAttributes, useState } from "react";
-import ImagePlaceholderError from "../assets/placeholder-error.png";
+import { MediaError } from "./MediaError";
 import css from "./MediaImage.module.css";
 
 export interface MediaImageProps extends ImgHTMLAttributes<HTMLImageElement> {
+  active: boolean;
   aspectRatio?: string;
 }
 
@@ -11,6 +12,7 @@ export const MediaImage = (props: MediaImageProps) => {
 };
 
 const ImageWithFallback = ({
+  active,
   src,
   alt,
   aspectRatio,
@@ -24,7 +26,7 @@ const ImageWithFallback = ({
   return (
     <div className={css.mediaImage} style={{ aspectRatio }}>
       <img
-        style={{ imageRendering }}
+        style={{ imageRendering, aspectRatio }}
         src={src}
         alt={alt}
         onError={() => {
@@ -42,9 +44,14 @@ const ImageWithFallback = ({
         {...props}
       />
       {(loading || error) && (
-        <a href={src} className={css.mediaImageErrored} target="_blank">
-          <img src={error ? ImagePlaceholderError : ImagePlaceholderError} />
-        </a>
+        <MediaError
+          active={active}
+          src={src}
+          alt={alt}
+          aspectRatio={aspectRatio}
+          className={css.mediaImageErrored}
+          {...props}
+        />
       )}
     </div>
   );

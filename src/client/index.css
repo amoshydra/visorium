@@ -13,3 +13,11 @@ body {
     justify-content: flex-start;
     align-items: flex-start;
 }
+
+body {
+    scrollbar-gutter: stable;
+}
+body:has(dialog[data-active="true"]) {
+    overflow: hidden;
+    padding-right: var(--scrollbar-width);
+}

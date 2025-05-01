@@ -18,7 +18,7 @@ export function ImageGallery() {
       )}
     >
       <Masonry
-        columnWidth={475}
+        columnWidth={190}
         items={files}
         itemKey={(data, index) => data?.src ?? index}
         render={MasonryCard}

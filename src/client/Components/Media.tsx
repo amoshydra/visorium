@@ -1,6 +1,8 @@
-import { ReactElement } from "react";
-import { videoRegExp } from "../../shared/file-extension";
+import { useMemo, useState } from "react";
+import { imageRegExp, videoRegExp } from "../../shared/file-extension";
+import { LightBox } from "./LightBox";
 import css from "./Media.module.css";
+import { MediaError } from "./MediaError";
 import { MediaImage } from "./MediaImage";
 import { MediaVideo } from "./MediaVideo";
 
@@ -11,36 +13,42 @@ interface MediaProp {
 }
 
 export const Media = ({ src, name, aspectRatio }: MediaProp) => {
-  if (videoRegExp.test(name)) {
-    return (
-      <MediaItem label={name}>
-        <MediaVideo aspectRatio={aspectRatio} src={src} alt={name} />
-      </MediaItem>
-    );
-  }
+  const [isActive, setIsActive] = useState(false);
 
-  return (
-    <MediaItem label={name}>
-      <MediaImage aspectRatio={aspectRatio} src={src} alt={name} />
-    </MediaItem>
-  );
-};
+  const MediaComponent = useMemo(() => getMediaComponent(name), [name]);
 
-const MediaItem = ({
-  children,
-  label,
-}: {
-  label: string;
-  children: ReactElement;
-}) => {
   return (
     <figure className={css.media}>
-      <Caption label={label} />
-      {children}
+      <Caption label={name} />
+      <LightBox
+        active={isActive}
+        onActiveChange={(active) => {
+          setIsActive(active);
+        }}
+        aspectRatio={aspectRatio}
+      >
+        <MediaComponent
+          active={isActive}
+          aspectRatio={aspectRatio}
+          src={src}
+          alt={name}
+        />
+      </LightBox>
     </figure>
   );
 };
 
 const Caption = ({ label }: { label: string }) => {
   return <figcaption className={css.label}>{label}</figcaption>;
+};
+
+const getMediaComponent = (name: string) => {
+  if (videoRegExp.test(name)) {
+    return MediaVideo;
+  }
+  if (imageRegExp.test(name)) {
+    return MediaImage;
+  }
+
+  return MediaError;
 };

@@ -1,15 +1,21 @@
 import { useCallback, useState, VideoHTMLAttributes } from "react";
 
 export interface MediaVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
+  active: boolean;
   aspectRatio?: string;
   alt?: string;
 }
 
-export const MediaVideo = ({ aspectRatio, ...props }: MediaVideoProps) => {
+export const MediaVideo = ({
+  active,
+  aspectRatio,
+  ...props
+}: MediaVideoProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const playThis = useCallback(
     ({ currentTarget }: { currentTarget: HTMLVideoElement }) => {
+      if (active) return;
       document
         .querySelectorAll('video[data-is-playing="true"]')
         .forEach((e) => {
@@ -18,7 +24,7 @@ export const MediaVideo = ({ aspectRatio, ...props }: MediaVideoProps) => {
       currentTarget.play();
       setIsPlaying(!currentTarget.paused);
     },
-    [],
+    [active],
   );
 
   return (
@@ -28,10 +34,14 @@ export const MediaVideo = ({ aspectRatio, ...props }: MediaVideoProps) => {
       playsInline
       preload="metadata"
       loop
-      controls
+      controls={active}
       src={props.src}
       {...props}
       onMouseEnter={playThis}
+      onMouseLeave={({ currentTarget }) => {
+        if (active) return;
+        currentTarget.pause();
+      }}
     />
   );
 };

@@ -1,5 +1,7 @@
 .media {
     all: unset;
+    --media-safe-area: 100px;
+    --media-max-height: calc(100vh - var(--media-safe-area));
 }
 
 .media video,
@@ -7,8 +9,7 @@
     height: 100%;
     width: 100%;
     object-fit: contain;
-    max-width: 100%;
-    max-height: calc(100vh - var(--control-bar-height) - 100px);
+    max-height: var(--media-max-height);
 }
 
 .label {
@@ -18,4 +19,63 @@
     white-space: nowrap;
     display: block;
     width: 100%;
+}
+
+.lightBoxButton {
+    display: block;
+    padding: 0;
+    background: none;
+    border: none;
+    height: 100%;
+    width: 100%;
+    position: relative;
+    min-height: 0;
+    max-width: 100%;
+    max-height: var(--media-max-height);
+    &:focus-visible {
+        z-index: 1;
+    }
+    &[data-holding="true"] {
+        transition: scale 0.5s ease-in;
+        scale: 1.05;
+        z-index: 1;
+    }
+}
+
+.lightBoxDialog {
+    all: unset;
+    z-index: 1;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    transition: all 0.5s ease;
+    will-change: top, left;
+    top: 0;
+    left: 0;
+    &[data-active="false"]:active {
+        scale: 1.025;
+    }
+    &[data-active="true"] {
+        position: fixed;
+        top: 0;
+        left: 0;
+    }
+}
+
+.lightBoxBackdrop {
+    display: none;
+}
+.lightBoxBackdrop[data-active="true"] {
+    display: block;
+    z-index: 1;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(24px);
 }
