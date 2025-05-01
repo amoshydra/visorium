@@ -1,7 +1,6 @@
-import ffprobeInstallerFfprobe from "@ffprobe-installer/ffprobe";
-import ffprobe from "ffprobe-client";
 import sharp from "sharp";
 import { imageRegExp, videoRegExp } from "../../shared/file-extension.js";
+import { ffprobe } from "./ffprobe.js";
 
 type AspectRatio = `${number}/${number}`;
 
@@ -25,9 +24,7 @@ export const probeAspectRatio = async (
 const probeVideoAspectRadio = async (
   path: string,
 ): Promise<AspectRatio | undefined> => {
-  const probed = await ffprobe(path, {
-    path: ffprobeInstallerFfprobe.path,
-  });
+  const probed = await ffprobe(path);
   const { display_aspect_ratio } = probed?.streams.find(
     (stream) => stream.codec_type === "video",
   ) || { display_aspect_ratio: undefined };
