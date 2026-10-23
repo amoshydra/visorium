@@ -24,6 +24,7 @@ export function ImageGallery() {
     >
       <Masonry
         columnWidth={190}
+        itemHeightEstimate={144}
         items={files}
         itemKey={(data, index) => data?.src ?? index}
         render={MasonryCard}
@@ -33,7 +34,12 @@ export function ImageGallery() {
 }
 
 const MasonryCard = ({
-  data: { name, src, aspectRatio },
+  data: { name, src, thumbSrc, aspectRatio },
 }: RenderComponentProps<MediaInfo>) => (
-  <Media name={name} src={src} aspectRatio={aspectRatio} />
+  <Media
+    name={name}
+    src={src}
+    thumbnailSrc={thumbSrc}
+    aspectRatio={aspectRatio}
+  />
 );

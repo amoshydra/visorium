@@ -1,9 +1,14 @@
 import chokidar from "chokidar";
 import express from "express";
 import { Stats } from "node:fs";
-import { sep } from "node:path";
+import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
 import { Time } from "time-chainer";
 import { startServer } from "../../server/index.js";
+import {
+  createThumbnailer,
+  getDefaultCacheDir,
+  normalizeThumbnailWidth,
+} from "../../server/thumbnails.js";
 import { FileEvent } from "../../shared/events.js";
 import { mediaRegExp } from "../../shared/file-extension.js";
 import { type FileInfo } from "../../shared/FileInfo.js";
@@ -18,10 +23,20 @@ interface InitOptions {
 
 let counter = 0;
 
+const isOutside = (path: string) =>
+  path === ".." ||
+  path.startsWith(`..${sep}`) ||
+  path.startsWith("../") ||
+  path.startsWith("..\\") ||
+  isAbsolute(path);
+
 export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
 
   const { app, port, io } = await startServer(parseInt(options.port, 10));
+  const fileMap = new Map<string, FileInfo>();
+  const thumbnailer = createThumbnailer({ cacheDir: getDefaultCacheDir() });
+
   app.use(
     "/files",
     express.static(process.cwd(), {
@@ -35,6 +50,56 @@ export async function start(options: InitOptions) {
       maxAge: Time.days(1),
     }),
   );
+
+  app.get("/thumb", async (req, res) => {
+    const rawPath = typeof req.query.path === "string" ? req.query.path : "";
+    const relativePath = normalize(rawPath);
+
+    if (!rawPath || !relativePath || isOutside(relativePath)) {
+      res.status(400).end();
+      return;
+    }
+
+    const cwd = process.cwd();
+    const absolutePath = resolve(cwd, relativePath);
+
+    if (isOutside(relative(cwd, absolutePath))) {
+      res.status(400).end();
+      return;
+    }
+
+    const entry = fileMap.get(relativePath);
+    if (!entry) {
+      res.status(404).end();
+      return;
+    }
+
+    const thumbnail = await thumbnailer.get({
+      sourcePath: absolutePath,
+      mtimeMs: entry.mt,
+      size: entry.sz ?? 0,
+      width: normalizeThumbnailWidth(req.query.w),
+    });
+
+    if (!thumbnail) {
+      res.sendFile(absolutePath);
+      return;
+    }
+
+    const headers: Record<string, string> = {
+      "Content-Type": "image/webp",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    };
+    if (thumbnail.width) {
+      headers["X-Width"] = String(thumbnail.width);
+    }
+    if (thumbnail.height) {
+      headers["X-Height"] = String(thumbnail.height);
+    }
+
+    res.sendFile(thumbnail.path, { headers });
+  });
+
   logger.info(`Visorium server started on port ${port}`);
 
   setTimeout(() => {
@@ -50,8 +115,6 @@ export async function start(options: InitOptions) {
       persistent: true,
       cwd: process.cwd(),
     });
-
-    const fileMap = new Map<string, FileInfo>();
 
     const { promise, resolve } = withPromiseResolver<void>();
 
@@ -101,6 +164,7 @@ const prepareFileEntry = async (
   return {
     ar: await probeAspectRatio(path),
     mt: stat?.mtimeMs || 0,
+    sz: stat?.size || 0,
     t,
   };
 };

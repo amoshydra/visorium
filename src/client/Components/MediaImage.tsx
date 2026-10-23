@@ -1,10 +1,11 @@
-import { ImgHTMLAttributes, useState } from "react";
+import { ImgHTMLAttributes, useEffect, useState } from "react";
 import { MediaError } from "./MediaError";
 import css from "./MediaImage.module.css";
 
 export interface MediaImageProps extends ImgHTMLAttributes<HTMLImageElement> {
   active: boolean;
   aspectRatio?: string;
+  thumbnailSrc?: string;
 }
 
 export const MediaImage = (props: MediaImageProps) => {
@@ -14,6 +15,7 @@ export const MediaImage = (props: MediaImageProps) => {
 const ImageWithFallback = ({
   active,
   src,
+  thumbnailSrc,
   alt,
   aspectRatio,
   ...props
@@ -23,11 +25,17 @@ const ImageWithFallback = ({
   const [imageRendering, setImageRendering] = useState<"auto" | "pixelated">(
     "auto",
   );
+  const imageSrc = active ? src : (thumbnailSrc ?? src);
+
+  useEffect(() => {
+    setError(false);
+  }, [imageSrc]);
+
   return (
     <div className={css.mediaImage} style={{ aspectRatio }}>
       <img
         style={{ imageRendering, aspectRatio }}
-        src={src}
+        src={imageSrc}
         alt={alt}
         onError={() => {
           setError(true);
