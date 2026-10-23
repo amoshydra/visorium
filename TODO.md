@@ -23,13 +23,13 @@ and scroll, without blowing up browser memory.
 
 ## Phase 3 — exploration UI
 
-- [ ] Sticky toolbar: search, type filter, sort, density, folder filter
-- [ ] Search is plain, case-insensitive substring matching (no regex crash)
-- [ ] Folder chips/select with counts
-- [ ] URL state (`q`, `type`, `sort`, `order`, `folder`, `density`)
-- [ ] Single gallery-level lightbox with keyboard next/prev, position,
+- [x] Sticky toolbar: search, type filter, sort, density, folder filter
+- [x] Search is plain, case-insensitive substring matching (no regex crash)
+- [x] Folder chips/select with counts
+- [x] URL state (`q`, `type`, `sort`, `order`, `folder`, `density`)
+- [x] Single gallery-level lightbox with keyboard next/prev, position,
       metadata, and preview/original loading
-- [ ] Tests for selection, URL parsing, folder options, and formatting
+- [x] Tests for selection, URL parsing, folder options, and formatting
 
 ## Phase 4 — media pipeline and cache hygiene
 

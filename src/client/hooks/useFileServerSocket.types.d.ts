@@ -6,6 +6,7 @@ export interface MediaInfo {
   posterSrc?: string;
   name: string;
   aspectRatio: string | undefined;
+  discovery?: number;
   mtime?: number;
   size?: number;
 }

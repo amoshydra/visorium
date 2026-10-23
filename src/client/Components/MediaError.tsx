@@ -1,27 +1,42 @@
 import { ImgHTMLAttributes } from "react";
 import ImagePlaceholderError from "../assets/placeholder-error.png";
+import mediaImageCss from "./MediaImage.module.css";
 import css from "./MediaError.module.css";
 
 export interface MediaErrorProps extends ImgHTMLAttributes<HTMLImageElement> {
-  active: boolean;
   aspectRatio?: string;
+  link?: boolean;
 }
 
 export const MediaError = ({
-  active,
+  link = true,
   src,
   aspectRatio,
   className,
   ...props
 }: MediaErrorProps) => {
+  const classes = [css.mediaError, mediaImageCss.mediaImage, className]
+    .filter(Boolean)
+    .join(" ");
+  const content = <img {...props} src={ImagePlaceholderError} />;
+
+  if (!link) {
+    return (
+      <div className={classes} style={{ aspectRatio }}>
+        {content}
+      </div>
+    );
+  }
+
   return (
     <a
       href={src}
-      className={[css.mediaError, css.mediaImage, className].join(" ")}
+      className={classes}
       target="_blank"
+      rel="noreferrer"
       style={{ aspectRatio }}
     >
-      <img {...props} src={ImagePlaceholderError} />
+      {content}
     </a>
   );
 };

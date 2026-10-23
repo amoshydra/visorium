@@ -53,7 +53,7 @@ const ImageWithFallback = ({
       />
       {(loading || error) && (
         <MediaError
-          active={active}
+          link={false}
           src={src}
           alt={alt}
           aspectRatio={aspectRatio}

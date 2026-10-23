@@ -1,10 +1,4 @@
-import {
-  startTransition,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { FileEvent, type FileBatch } from "../../../shared/events";
 import type { FileInfo } from "../../../shared/FileInfo";
@@ -12,16 +6,9 @@ import { applyFileBatch } from "../../lib/file-index";
 import { toFileUrl, toThumbnailUrl } from "../../lib/urls";
 import type { MediaInfo, ServerFileEntry } from "../useFileServerSocket.types";
 
-const params = new URLSearchParams(window.location.search);
-const defaultSearch = params.get("search") || "";
-const defaultOrder = params.get("order") === "desc" ? "desc" : "asc";
-
 const UPDATE_FLUSH_MS = 100;
 
-export const useFileServerSocket = (
-  search = defaultSearch,
-  order = defaultOrder,
-): MediaInfo[] => {
+export const useFileServerSocket = (): MediaInfo[] => {
   const [record, setRecord] = useState<Record<string, FileInfo>>({});
 
   useEffect(() => {
@@ -99,38 +86,17 @@ export const useFileServerSocket = (
     };
   }, []);
 
-  const deferredSearch = useDeferredValue(search || "");
-
-  const files = useMemo(() => {
-    const regexp = deferredSearch ? new RegExp(deferredSearch) : null;
-    const filter = regexp
-      ? ([name]: [string, unknown]) => regexp.test(name)
-      : () => true;
-    const sort =
-      order === "desc"
-        ? (
-            [, { t: a }]: [unknown, { t: number }],
-            [, { t: b }]: [unknown, { t: number }],
-          ) => b - a
-        : (
-            [, { t: a }]: [unknown, { t: number }],
-            [, { t: b }]: [unknown, { t: number }],
-          ) => a - b;
-
-    return Object.entries(record)
-      .filter(filter)
-      .sort(sort)
-      .map(
-        ([name, { ar: aspectRatio, mt: modifiedTime, sz }]): MediaInfo => ({
-          src: toFileUrl(location.origin, name, modifiedTime),
-          thumbSrc: toThumbnailUrl(location.origin, name, modifiedTime),
-          name,
-          aspectRatio,
-          mtime: modifiedTime,
-          size: sz,
-        }),
-      );
-  }, [record, order, deferredSearch]);
-
-  return files;
+  return useMemo(() => {
+    return Object.entries(record).map(
+      ([name, { ar: aspectRatio, mt: modifiedTime, sz, t }]): MediaInfo => ({
+        src: toFileUrl(location.origin, name, modifiedTime),
+        thumbSrc: toThumbnailUrl(location.origin, name, modifiedTime),
+        name,
+        aspectRatio,
+        discovery: t,
+        mtime: modifiedTime,
+        size: sz,
+      }),
+    );
+  }, [record]);
 };
