@@ -108,10 +108,11 @@ export const GalleryToolbar = ({
       </button>
 
       {hasFolders && (
-        <label className={css.control}>
+        <label className={`${css.control} ${css.folderControl}`}>
           <span>Folder</span>
           <select
             value={state.folder}
+            title={state.folder || "All folders"}
             onChange={(event) => onChange({ folder: event.target.value })}
           >
             <option value="">All folders</option>

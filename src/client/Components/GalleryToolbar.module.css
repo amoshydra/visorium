@@ -7,6 +7,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 0.75rem;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     background: rgba(14, 14, 14, 0.92);
     border-bottom: 1px solid #242424;
     backdrop-filter: blur(12px);
@@ -63,6 +66,8 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    min-width: 0;
+    max-width: 100%;
     white-space: nowrap;
 }
 
@@ -73,6 +78,8 @@
     background: #1a1a1a;
     color: #ddd;
     font: inherit;
+    min-width: 0;
+    max-width: 100%;
     color-scheme: dark;
 }
 
@@ -120,4 +127,40 @@
 .control select:focus-visible {
     outline: 2px solid #6ea8fe;
     outline-offset: 1px;
+}
+
+@media (max-width: 720px) {
+    .toolbar {
+        gap: 0.4rem;
+        padding: 0.5rem;
+    }
+
+    .search {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .segmented {
+        flex: 0 1 auto;
+    }
+
+    .control {
+        flex: 0 1 auto;
+    }
+
+    .folderControl {
+        flex: 1 1 100%;
+    }
+
+    .folderControl select {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+    }
+
+    .count {
+        flex: 1 1 100%;
+        margin-left: 0;
+        text-align: right;
+    }
 }
