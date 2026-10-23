@@ -136,7 +136,7 @@ export async function start(options: InitOptions) {
     });
 
     if (!thumbnail) {
-      res.sendFile(absolutePath);
+      res.sendFile(absolutePath, { dotfiles: "allow" });
       return;
     }
 
@@ -151,7 +151,9 @@ export async function start(options: InitOptions) {
       headers["X-Height"] = String(thumbnail.height);
     }
 
-    res.sendFile(thumbnail.path, { headers });
+    // The cache lives under a dot-directory such as ~/.cache, which sendFile
+    // ignores by default.
+    res.sendFile(thumbnail.path, { headers, dotfiles: "allow" });
   });
 
   app.get("/poster", async (req, res) => {
@@ -190,6 +192,7 @@ export async function start(options: InitOptions) {
         "Content-Type": "image/jpeg",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
+      dotfiles: "allow",
     });
   });
 
