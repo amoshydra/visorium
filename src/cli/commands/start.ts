@@ -78,6 +78,7 @@ export async function start(options: InitOptions) {
   const { promise: readyPromise, resolve: resolveReady } =
     withPromiseResolver<void>();
   let ready = false;
+  let watcherError: string | null = null;
 
   void pruneCache(cacheDir, {
     maxBytes: parseCacheMaxBytes(process.env.VISORIUM_CACHE_MAX_BYTES),
@@ -203,6 +204,9 @@ export async function start(options: InitOptions) {
     socket.emit(FileEvent.Pending);
     await readyPromise;
     socket.emit(FileEvent.Initial, Array.from(fileMap.entries()));
+    if (watcherError) {
+      socket.emit(FileEvent.Error, watcherError);
+    }
     socket.on("disconnect", () => {
       logger.info("Client disconnected");
     });
@@ -292,6 +296,9 @@ export async function start(options: InitOptions) {
       logger.info(`File removed: ${path}`);
     })
     .on("error", (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      watcherError = message;
+      io.emit(FileEvent.Error, message);
       logger.error("Watcher error", error);
 
       if (!ready) {

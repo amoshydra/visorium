@@ -1,4 +1,7 @@
-import { MediaInfo } from "../useFileServerSocket.types";
+import type {
+  MediaInfo,
+  UseFileServerSocketResult,
+} from "../useFileServerSocket.types";
 
 const files: MediaInfo[] = [
   {
@@ -739,6 +742,6 @@ const files: MediaInfo[] = [
   },
 ].sort(() => Math.random() - 0.5);
 
-export const useFileServerSocket = (): MediaInfo[] => {
-  return files;
+export const useFileServerSocket = (): UseFileServerSocketResult => {
+  return { files, status: "ready", retry: () => {} };
 };

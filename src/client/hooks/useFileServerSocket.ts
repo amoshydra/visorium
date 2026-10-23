@@ -1,4 +1,4 @@
-import type { MediaInfo } from "./useFileServerSocket.types";
+import type { UseFileServerSocketResult } from "./useFileServerSocket.types";
 
 const isDemo = import.meta.env.VITE_VISORIUM_MODE === "demo";
 
@@ -7,6 +7,6 @@ const id = isDemo ? "demo" : "default";
 const { useFileServerSocket } = (await import(
   `./useFileServerSocket/${id}.ts`
 )) as {
-  useFileServerSocket: () => MediaInfo[];
+  useFileServerSocket: () => UseFileServerSocketResult;
 };
 export { useFileServerSocket };
