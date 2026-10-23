@@ -5,12 +5,12 @@ and scroll, without blowing up browser memory.
 
 ## Phase 1 — thumbnails and layout
 
-- [ ] Cached on-demand thumbnail endpoint (`/thumb`) backed by sharp
-- [ ] WebP thumbnails sized for the grid (640px default)
-- [ ] Grid uses thumbnails; lightbox still uses the original
-- [ ] Graceful fallback to the original when sharp is unavailable or fails
-- [ ] Realistic masonry height estimate to stop scroll-height collapse
-- [ ] Unit tests for the queue, thumbnail cache, and URL helpers
+- [x] Cached on-demand thumbnail endpoint (`/thumb`) backed by sharp
+- [x] WebP thumbnails sized for the grid (640px default)
+- [x] Grid uses thumbnails; lightbox still uses the original
+- [x] Graceful fallback to the original when sharp is unavailable or fails
+- [x] Realistic masonry height estimate to stop scroll-height collapse
+- [x] Unit tests for the queue, thumbnail cache, and URL helpers
 
 ## Phase 2 — instant index and batched updates
 

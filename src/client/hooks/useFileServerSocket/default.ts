@@ -3,6 +3,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { FileEvent } from "../../../shared/events";
 import type { FileInfo } from "../../../shared/FileInfo";
+import { toFileUrl, toThumbnailUrl } from "../../lib/urls";
 import type { MediaInfo, ServerFileEntry } from "../useFileServerSocket.types";
 
 const params = new URLSearchParams(window.location.search);
@@ -71,10 +72,13 @@ export const useFileServerSocket = (
       .filter(filter)
       .sort(sort)
       .map(
-        ([name, { ar: aspectRatio, mt: modifiedTime }]): MediaInfo => ({
-          src: `${location.origin}/files/${encodeURIComponent(name)}?t=${modifiedTime}`,
+        ([name, { ar: aspectRatio, mt: modifiedTime, sz }]): MediaInfo => ({
+          src: toFileUrl(location.origin, name, modifiedTime),
+          thumbSrc: toThumbnailUrl(location.origin, name, modifiedTime),
           name,
           aspectRatio,
+          mtime: modifiedTime,
+          size: sz,
         }),
       );
   }, [record, order, deferredSearch]);

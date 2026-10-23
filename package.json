@@ -16,6 +16,8 @@
     "dev": "tsx src/cli/index.ts",
     "build": "NODE_ENV=production tsc -b && vite build",
     "lint": "eslint .",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
     "preview": "vite preview",
     "start": "NODE_ENV=production node lib/cli/index.js"
   },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { imageRegExp, videoRegExp } from "../../shared/file-extension";
 import { LightBox } from "./LightBox";
 import css from "./Media.module.css";
@@ -8,14 +8,41 @@ import { MediaVideo } from "./MediaVideo";
 
 interface MediaProp {
   src: string;
+  thumbnailSrc?: string;
   name: string;
   aspectRatio: string | undefined;
 }
 
-export const Media = ({ src, name, aspectRatio }: MediaProp) => {
-  const [isActive, setIsActive] = useState(false);
+type MediaKind = "image" | "video" | "error";
 
-  const MediaComponent = useMemo(() => getMediaComponent(name), [name]);
+export const Media = ({
+  src,
+  thumbnailSrc,
+  name,
+  aspectRatio,
+}: MediaProp) => {
+  const [isActive, setIsActive] = useState(false);
+  const kind = getMediaKind(name);
+
+  const media =
+    kind === "video" ? (
+      <MediaVideo
+        active={isActive}
+        aspectRatio={aspectRatio}
+        src={src}
+        alt={name}
+      />
+    ) : kind === "image" ? (
+      <MediaImage
+        active={isActive}
+        aspectRatio={aspectRatio}
+        src={src}
+        thumbnailSrc={thumbnailSrc}
+        alt={name}
+      />
+    ) : (
+      <MediaError active={isActive} aspectRatio={aspectRatio} src={src} alt={name} />
+    );
 
   return (
     <figure className={css.media}>
@@ -27,12 +54,7 @@ export const Media = ({ src, name, aspectRatio }: MediaProp) => {
         }}
         aspectRatio={aspectRatio}
       >
-        <MediaComponent
-          active={isActive}
-          aspectRatio={aspectRatio}
-          src={src}
-          alt={name}
-        />
+        {media}
       </LightBox>
     </figure>
   );
@@ -42,13 +64,13 @@ const Caption = ({ label }: { label: string }) => {
   return <figcaption className={css.label}>{label}</figcaption>;
 };
 
-const getMediaComponent = (name: string) => {
+const getMediaKind = (name: string): MediaKind => {
   if (videoRegExp.test(name)) {
-    return MediaVideo;
+    return "video";
   }
   if (imageRegExp.test(name)) {
-    return MediaImage;
+    return "image";
   }
 
-  return MediaError;
+  return "error";
 };
