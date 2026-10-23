@@ -1,3 +1,10 @@
+import type { FileEntry } from "./FileInfo.js";
+
+export interface FileBatch {
+  set: FileEntry[];
+  delete: string[];
+}
+
 export const FileEvent = {
   Initial: "f:i",
   Pending: "f:p",

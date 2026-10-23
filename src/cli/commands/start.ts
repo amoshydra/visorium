@@ -1,17 +1,19 @@
 import chokidar from "chokidar";
 import express from "express";
-import { Stats } from "node:fs";
+import type { Stats } from "node:fs";
 import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
 import { Time } from "time-chainer";
 import { startServer } from "../../server/index.js";
+import { createQueue } from "../../server/queue.js";
 import {
   createThumbnailer,
   getDefaultCacheDir,
   normalizeThumbnailWidth,
 } from "../../server/thumbnails.js";
+import { createUpdateBatcher } from "../../server/update-batcher.js";
 import { FileEvent } from "../../shared/events.js";
 import { mediaRegExp } from "../../shared/file-extension.js";
-import { type FileInfo } from "../../shared/FileInfo.js";
+import type { FileInfo } from "../../shared/FileInfo.js";
 import { getMimeType } from "../../shared/mime.js";
 import { logger } from "../utils/logger.js";
 import { probeAspectRatio } from "../utils/media-prober.js";
@@ -30,12 +32,29 @@ const isOutside = (path: string) =>
   path.startsWith("..\\") ||
   isAbsolute(path);
 
+const createFileEntry = (stat: Stats | undefined, t: number): FileInfo => ({
+  mt: stat?.mtimeMs || 0,
+  sz: stat?.size || 0,
+  t,
+});
+
 export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
 
   const { app, port, io } = await startServer(parseInt(options.port, 10));
   const fileMap = new Map<string, FileInfo>();
   const thumbnailer = createThumbnailer({ cacheDir: getDefaultCacheDir() });
+  const probeQueue = createQueue(4);
+  const { promise: readyPromise, resolve: resolveReady } =
+    withPromiseResolver<void>();
+  let ready = false;
+
+  const batcher = createUpdateBatcher({
+    intervalMs: 150,
+    onFlush: (batch) => {
+      io.emit(FileEvent.Update, batch);
+    },
+  });
 
   app.use(
     "/files",
@@ -102,72 +121,91 @@ export async function start(options: InitOptions) {
 
   logger.info(`Visorium server started on port ${port}`);
 
-  setTimeout(() => {
-    const watcher = chokidar.watch(".", {
-      ignored: (file, stats) => {
-        if (file.includes(`${sep}node_modules${sep}`)) return true;
-        return !!(
-          stats?.isFile() &&
-          !mediaRegExp.test(file) &&
-          !options.ext.some((ext) => file.endsWith(ext))
-        );
-      },
-      persistent: true,
-      cwd: process.cwd(),
+  io.on("connection", async (socket) => {
+    logger.info("Client connected");
+    socket.emit(FileEvent.Pending);
+    await readyPromise;
+    socket.emit(FileEvent.Initial, Array.from(fileMap.entries()));
+    socket.on("disconnect", () => {
+      logger.info("Client disconnected");
     });
+  });
 
-    const { promise, resolve } = withPromiseResolver<void>();
+  const probe = (path: string, entry: FileInfo) => {
+    void probeQueue(() => probeAspectRatio(path)).then((aspectRatio) => {
+      if (!aspectRatio || fileMap.get(path) !== entry) {
+        return;
+      }
 
-    watcher
-      .on("add", async (path, stat) => {
-        const t = counter++;
-        const fileEntry = await prepareFileEntry(path, stat, t);
-        fileMap.set(path, fileEntry);
-        io.emit(FileEvent.Update, [path, fileEntry]);
-        logger.info(`File added: ${path}`);
-      })
-      .on("change", async (path, stat) => {
-        const t = fileMap.get(path)?.t ?? counter++;
-        const fileEntry = await prepareFileEntry(path, stat, t);
+      entry.ar = aspectRatio;
 
-        fileMap.set(path, fileEntry);
-        io.emit(FileEvent.Update, [path, fileEntry]);
-        logger.info(`File changed: ${path}`);
-      })
-      .on("unlink", async (path) => {
-        fileMap.delete(path);
-        io.emit(FileEvent.Delete, path);
-        logger.info(`File removed: ${path}`);
-      })
-      .on("ready", () => {
-        logger.info(`Visorium is ready: http://localhost:${port}`);
-        resolve();
-      });
-
-    io.on("connection", async (socket) => {
-      logger.info("Client connected");
-      io.emit(FileEvent.Pending);
-      await promise;
-      io.emit(FileEvent.Initial, Array.from(fileMap.entries()));
-      socket.on("disconnect", () => {
-        logger.info("Client disconnected");
-      });
+      if (ready) {
+        batcher.set(path, entry);
+      }
     });
-  }, 2000);
-}
-
-const prepareFileEntry = async (
-  path: string,
-  stat: Stats | undefined,
-  t: number,
-): Promise<FileInfo> => {
-  return {
-    ar: await probeAspectRatio(path),
-    mt: stat?.mtimeMs || 0,
-    sz: stat?.size || 0,
-    t,
   };
-};
+
+  const watcher = chokidar.watch(".", {
+    ignored: (file, stats) => {
+      if (file.includes(`${sep}node_modules${sep}`)) return true;
+      return !!(
+        stats?.isFile() &&
+        !mediaRegExp.test(file) &&
+        !options.ext.some((ext) => file.endsWith(ext))
+      );
+    },
+    persistent: true,
+    cwd: process.cwd(),
+  });
+
+  watcher
+    .on("add", (path, stat) => {
+      const t = counter++;
+      const entry = createFileEntry(stat, t);
+      fileMap.set(path, entry);
+
+      if (ready) {
+        batcher.set(path, entry);
+      }
+
+      logger.info(`File added: ${path}`);
+      probe(path, entry);
+    })
+    .on("change", (path, stat) => {
+      const t = fileMap.get(path)?.t ?? counter++;
+      const entry = createFileEntry(stat, t);
+      fileMap.set(path, entry);
+
+      if (ready) {
+        batcher.set(path, entry);
+      }
+
+      logger.info(`File changed: ${path}`);
+      probe(path, entry);
+    })
+    .on("unlink", (path) => {
+      fileMap.delete(path);
+
+      if (ready) {
+        batcher.delete(path);
+      }
+
+      logger.info(`File removed: ${path}`);
+    })
+    .on("error", (error) => {
+      logger.error("Watcher error", error);
+
+      if (!ready) {
+        ready = true;
+        resolveReady();
+      }
+    })
+    .on("ready", () => {
+      ready = true;
+      logger.info(`Visorium is ready: http://localhost:${port}`);
+      resolveReady();
+    });
+}
 
 interface WithPromiseResolver<T> {
   promise: Promise<T>;
@@ -175,12 +213,11 @@ interface WithPromiseResolver<T> {
   reject: (v: unknown) => void;
 }
 const withPromiseResolver = <T>(): WithPromiseResolver<T> => {
-  let resolve: WithPromiseResolver<T>["resolve"];
-  let reject: WithPromiseResolver<T>["reject"];
+  let resolve!: WithPromiseResolver<T>["resolve"];
+  let reject!: WithPromiseResolver<T>["reject"];
   const promise = new Promise<T>((res, rej) => {
     resolve = res;
     reject = rej;
   });
-  // @ts-ignore
   return { promise, resolve, reject };
 };

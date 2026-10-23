@@ -14,12 +14,12 @@ and scroll, without blowing up browser memory.
 
 ## Phase 2 — instant index and batched updates
 
-- [ ] Publish the file index before aspect-ratio probing finishes
-- [ ] Background probing with bounded concurrency
-- [ ] Batch watcher updates; send Initial per socket
-- [ ] Remove the 2s startup delay and the connection race
-- [ ] Client buffers updates and sorts/filters once per batch
-- [ ] Tests for batching and index merge behavior
+- [x] Publish the file index before aspect-ratio probing finishes
+- [x] Background probing with bounded concurrency
+- [x] Batch watcher updates; send Initial per socket
+- [x] Remove the 2s startup delay and the connection race
+- [x] Client buffers updates and sorts/filters once per batch
+- [x] Tests for batching and index merge behavior
 
 ## Phase 3 — exploration UI
 

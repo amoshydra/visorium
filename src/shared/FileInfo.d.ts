@@ -4,3 +4,5 @@ export interface FileInfo {
   sz?: number;
   t: number;
 }
+
+export type FileEntry = [path: string, info: FileInfo];
