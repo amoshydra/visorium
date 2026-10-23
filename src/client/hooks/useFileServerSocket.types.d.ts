@@ -12,3 +12,24 @@ export interface MediaInfo {
 }
 
 export type ServerFileEntry = FileEntry;
+
+export type FileServerStatus =
+  | "connecting"
+  | "loading"
+  | "reconnecting"
+  | "ready"
+  | "error";
+
+export type FileServerStatusEvent =
+  | "connect"
+  | "pending"
+  | "initial"
+  | "disconnect"
+  | "error"
+  | "retry";
+
+export interface UseFileServerSocketResult {
+  files: MediaInfo[];
+  status: FileServerStatus;
+  retry: () => void;
+}

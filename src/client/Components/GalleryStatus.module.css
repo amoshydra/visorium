@@ -1,0 +1,107 @@
+.status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 3rem 1rem;
+    color: #777;
+    font-family: system-ui, sans-serif;
+    text-align: center;
+}
+
+.dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-bottom: 0.75rem;
+    border-radius: 50%;
+    background: #555;
+}
+
+.dot[data-variant="loading"] {
+    background: #6ea8fe;
+    animation: pulse 1.2s ease-in-out infinite;
+}
+
+.dot[data-variant="error"] {
+    background: #e06c75;
+}
+
+.title {
+    margin: 0;
+    color: #ddd;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.message {
+    max-width: 34rem;
+    margin: 0.35rem 0 0;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.action {
+    margin-top: 1rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid #3a3a3a;
+    border-radius: 0.4rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.action:hover {
+    background: #242424;
+    color: #fff;
+}
+
+.action:focus-visible {
+    outline: 2px solid #6ea8fe;
+    outline-offset: 2px;
+}
+
+.skeletonGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem;
+    width: min(100%, 900px);
+    margin-top: 1.75rem;
+    opacity: 0.55;
+}
+
+.skeleton {
+    aspect-ratio: 4 / 3;
+    border-radius: 0.25rem;
+    background: linear-gradient(90deg, #171717 25%, #222 37%, #171717 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dot[data-variant="loading"],
+    .skeleton {
+        animation: none;
+    }
+}

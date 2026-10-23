@@ -10,4 +10,5 @@ export const FileEvent = {
   Pending: "f:p",
   Update: "f:u",
   Delete: "f:d",
+  Error: "f:e",
 };

@@ -13,13 +13,13 @@ import type { MediaInfo } from "../hooks/useFileServerSocket.types";
 import { DENSITY_WIDTHS } from "../lib/gallery-state";
 import { getFolderOptions, selectMedia } from "../lib/select-media";
 import { GalleryLightbox } from "./GalleryLightbox";
+import { GalleryStatus } from "./GalleryStatus";
 import { GalleryToolbar } from "./GalleryToolbar";
-import { ImageGalleryPlaceholder } from "./ImageGalleryPlaceholder";
 import { Media } from "./Media";
 import css from "./ImageGallery.module.css";
 
 export function ImageGallery() {
-  const files = useFileServerSocket();
+  const { files, status, retry } = useFileServerSocket();
   const [state, updateState] = useGalleryState();
   const deferredQuery = useDeferredValue(state.query);
   const viewState = useMemo(
@@ -58,7 +58,47 @@ export function ImageGallery() {
   );
 
   if (files.length === 0) {
-    return <ImageGalleryPlaceholder />;
+    if (status === "error") {
+      return (
+        <GalleryStatus
+          variant="error"
+          title="Can't connect to Visorium"
+          message="The server may still be starting. Check the terminal, then retry."
+          actionLabel="Retry"
+          onAction={retry}
+        />
+      );
+    }
+
+    if (status === "ready") {
+      return (
+        <GalleryStatus
+          variant="empty"
+          title="No images or videos found"
+          message="No media files are available in this folder yet. New files will appear automatically."
+        />
+      );
+    }
+
+    return (
+      <GalleryStatus
+        variant="loading"
+        title={
+          status === "connecting"
+            ? "Connecting to Visorium…"
+            : status === "reconnecting"
+              ? "Reconnecting…"
+              : "Scanning folder…"
+        }
+        message={
+          status === "connecting"
+            ? "Waiting for the media server."
+            : status === "reconnecting"
+              ? "The connection was lost. Trying again…"
+              : "Building the media index. Large folders can take a moment."
+        }
+      />
+    );
   }
 
   const columnWidth = DENSITY_WIDTHS[state.density];
@@ -72,6 +112,23 @@ export function ImageGallery() {
         folders={folders}
         onChange={updateState}
       />
+
+      {status !== "ready" && (
+        <div className={css.banner} role="status">
+          <span>
+            {status === "error"
+              ? "Disconnected — showing the last loaded files."
+              : status === "reconnecting"
+                ? "Reconnecting…"
+                : "Scanning folder…"}
+          </span>
+          {status === "error" && (
+            <button type="button" onClick={retry}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
 
       {visibleFiles.length === 0 ? (
         <div className={css.noMatches}>

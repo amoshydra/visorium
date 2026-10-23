@@ -4,3 +4,36 @@
     font-family: monospace;
     text-align: center;
 }
+
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid #2a2a2a;
+    background: #1a1a1a;
+    color: #999;
+    font-family: system-ui, sans-serif;
+    font-size: 0.78rem;
+}
+
+.banner button {
+    padding: 0.25rem 0.55rem;
+    border: 1px solid #3a3a3a;
+    border-radius: 0.35rem;
+    background: #242424;
+    color: #ddd;
+    font: inherit;
+    cursor: pointer;
+}
+
+.banner button:hover {
+    background: #2c2c2c;
+    color: #fff;
+}
+
+.banner button:focus-visible {
+    outline: 2px solid #6ea8fe;
+    outline-offset: 2px;
+}
