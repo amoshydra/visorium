@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { toFileUrl, toThumbnailUrl } from "../src/client/lib/urls.js";
+import { toFileUrl, toPosterUrl, toThumbnailUrl } from "../src/client/lib/urls.js";
 import test from "node:test";
 
 test("builds encoded file URLs", () => {
@@ -21,5 +21,12 @@ test("builds encoded thumbnail URLs", () => {
   assert.equal(
     toThumbnailUrl("http://localhost:3000", "a b.jpg", 0),
     "http://localhost:3000/thumb?path=a%20b.jpg&v=0&w=640",
+  );
+});
+
+test("builds encoded poster URLs", () => {
+  assert.equal(
+    toPosterUrl("http://localhost:3000", "sub/a.mp4", 123, 640),
+    "http://localhost:3000/poster?path=sub%2Fa.mp4&v=123&w=640",
   );
 });

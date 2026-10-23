@@ -106,7 +106,7 @@ export const getThumbnailCachePath = (
     )
     .digest("hex");
 
-  return join(cacheDir, hash.slice(0, 2), `${hash}.webp`);
+  return join(cacheDir, "thumbs", hash.slice(0, 2), `${hash}.webp`);
 };
 
 const loadSharp = async (): Promise<SharpFactory | null> => {

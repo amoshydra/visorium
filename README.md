@@ -29,6 +29,31 @@ open [`http://localhost:3000`](http://localhost:3000) in your browser.
 
 Visorium collect all images and video files and serves them in a gallery view.
 
+For large folders, Visorium generates grid thumbnails on demand and caches them
+outside the served folder. The gallery also has a search/filter bar, folder
+filter, sort controls, and a preview lightbox.
+
+### Thumbnail cache
+
+Thumbnails and video posters are cached in the platform cache directory
+(`~/.cache/visorium` on Linux). The location can be overridden with
+`VISORIUM_CACHE_DIR`. The cache is pruned at startup to 2 GiB by default; set
+`VISORIUM_CACHE_MAX_BYTES` to change the limit.
+
+Video posters require `ffmpeg` on `PATH` (or `FFMPEG_PATH`). Without it, videos
+still play, but the grid falls back to video metadata.
+
+### Gallery URL parameters
+
+The toolbar writes its state to the URL, so filtered views can be bookmarked:
+
+- `q` — filename search (case-insensitive, plain substring)
+- `type` — `all`, `image`, or `video`
+- `sort` — `discovery`, `name`, `modified`, or `size`
+- `order` — `asc` or `desc`
+- `folder` — a relative folder path (or `__root__` for the top level)
+- `density` — `compact`, `comfortable`, or `large`
+
 ## Development
 
 ```bash

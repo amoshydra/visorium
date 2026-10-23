@@ -20,6 +20,7 @@ export const Media = ({ data, onOpen }: MediaProps) => {
         active={false}
         aspectRatio={aspectRatio}
         src={src}
+        poster={data.posterSrc}
         alt={name}
       />
     ) : kind === "image" ? (
