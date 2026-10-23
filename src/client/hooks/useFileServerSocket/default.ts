@@ -1,14 +1,22 @@
-import { produce } from "immer";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { io } from "socket.io-client";
-import { FileEvent } from "../../../shared/events";
+import { FileEvent, type FileBatch } from "../../../shared/events";
 import type { FileInfo } from "../../../shared/FileInfo";
+import { applyFileBatch } from "../../lib/file-index";
 import { toFileUrl, toThumbnailUrl } from "../../lib/urls";
 import type { MediaInfo, ServerFileEntry } from "../useFileServerSocket.types";
 
 const params = new URLSearchParams(window.location.search);
 const defaultSearch = params.get("search") || "";
 const defaultOrder = params.get("order") === "desc" ? "desc" : "asc";
+
+const UPDATE_FLUSH_MS = 100;
 
 export const useFileServerSocket = (
   search = defaultSearch,
@@ -17,35 +25,76 @@ export const useFileServerSocket = (
   const [record, setRecord] = useState<Record<string, FileInfo>>({});
 
   useEffect(() => {
-    // Initialize socket connection
     const socketInstance = io(window.location.origin);
+    const pendingSet = new Map<string, FileInfo>();
+    const pendingDelete = new Set<string>();
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const cancelFlush = () => {
+      if (flushTimer !== null) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+    };
+
+    const clearPending = () => {
+      pendingSet.clear();
+      pendingDelete.clear();
+    };
+
+    const flush = () => {
+      flushTimer = null;
+
+      if (pendingSet.size === 0 && pendingDelete.size === 0) {
+        return;
+      }
+
+      const batch: FileBatch = {
+        set: Array.from(pendingSet.entries()),
+        delete: Array.from(pendingDelete),
+      };
+      clearPending();
+
+      startTransition(() => {
+        setRecord((current) => applyFileBatch(current, batch));
+      });
+    };
+
+    const scheduleFlush = () => {
+      if (flushTimer === null) {
+        flushTimer = setTimeout(flush, UPDATE_FLUSH_MS);
+      }
+    };
+
     socketInstance.on(FileEvent.Pending, () => {
+      cancelFlush();
+      clearPending();
       setRecord({});
     });
     socketInstance.on(FileEvent.Initial, (initialFiles: ServerFileEntry[]) => {
-      const newRecord = Object.fromEntries(
-        initialFiles.map(([path, v]) => [path, v]),
-      );
-      setRecord(newRecord);
+      cancelFlush();
+      clearPending();
+      setRecord(Object.fromEntries(initialFiles));
     });
-    socketInstance.on(
-      FileEvent.Update,
-      ([newFile, lastModified]: ServerFileEntry) => {
-        setRecord((record) => {
-          return produce(record, (draft) => {
-            draft[newFile] = lastModified;
-          });
-        });
-      },
-    );
-    socketInstance.on(FileEvent.Delete, (newFile: string) => {
-      setRecord((record) => {
-        const temp = { ...record };
-        delete temp[newFile];
-        return temp;
-      });
+    socketInstance.on(FileEvent.Update, (batch: FileBatch) => {
+      for (const [path, info] of batch.set) {
+        pendingDelete.delete(path);
+        pendingSet.set(path, info);
+      }
+      for (const path of batch.delete) {
+        pendingSet.delete(path);
+        pendingDelete.add(path);
+      }
+      scheduleFlush();
     });
+    socketInstance.on(FileEvent.Delete, (path: string) => {
+      pendingSet.delete(path);
+      pendingDelete.add(path);
+      scheduleFlush();
+    });
+
     return () => {
+      cancelFlush();
       socketInstance.disconnect();
     };
   }, []);

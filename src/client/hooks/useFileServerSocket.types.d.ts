@@ -1,4 +1,4 @@
-import { FileInfo } from "../../../shared/FileInfo";
+import type { FileEntry } from "../../../shared/FileInfo";
 
 export interface MediaInfo {
   src: string;
@@ -10,4 +10,4 @@ export interface MediaInfo {
   size?: number;
 }
 
-export type ServerFileEntry = [path: string, info: FileInfo];
+export type ServerFileEntry = FileEntry;
