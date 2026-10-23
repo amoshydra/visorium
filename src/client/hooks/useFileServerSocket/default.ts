@@ -1,9 +1,14 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { FileEvent, type FileBatch } from "../../../shared/events";
+import { videoRegExp } from "../../../shared/file-extension";
 import type { FileInfo } from "../../../shared/FileInfo";
 import { applyFileBatch } from "../../lib/file-index";
-import { toFileUrl, toThumbnailUrl } from "../../lib/urls";
+import {
+  toFileUrl,
+  toPosterUrl,
+  toThumbnailUrl,
+} from "../../lib/urls";
 import type { MediaInfo, ServerFileEntry } from "../useFileServerSocket.types";
 
 const UPDATE_FLUSH_MS = 100;
@@ -91,6 +96,9 @@ export const useFileServerSocket = (): MediaInfo[] => {
       ([name, { ar: aspectRatio, mt: modifiedTime, sz, t }]): MediaInfo => ({
         src: toFileUrl(location.origin, name, modifiedTime),
         thumbSrc: toThumbnailUrl(location.origin, name, modifiedTime),
+        posterSrc: videoRegExp.test(name)
+          ? toPosterUrl(location.origin, name, modifiedTime)
+          : undefined,
         name,
         aspectRatio,
         discovery: t,

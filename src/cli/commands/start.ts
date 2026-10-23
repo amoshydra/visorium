@@ -4,6 +4,11 @@ import type { Stats } from "node:fs";
 import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
 import { Time } from "time-chainer";
 import { startServer } from "../../server/index.js";
+import {
+  parseCacheMaxBytes,
+  pruneCache,
+} from "../../server/cache-prune.js";
+import { loadMetadataCache } from "../../server/metadata-cache.js";
 import { createQueue } from "../../server/queue.js";
 import {
   createThumbnailer,
@@ -11,8 +16,9 @@ import {
   normalizeThumbnailWidth,
 } from "../../server/thumbnails.js";
 import { createUpdateBatcher } from "../../server/update-batcher.js";
+import { createVideoPosterer } from "../../server/video-posters.js";
 import { FileEvent } from "../../shared/events.js";
-import { mediaRegExp } from "../../shared/file-extension.js";
+import { mediaRegExp, videoRegExp } from "../../shared/file-extension.js";
 import type { FileInfo } from "../../shared/FileInfo.js";
 import { getMimeType } from "../../shared/mime.js";
 import { logger } from "../utils/logger.js";
@@ -32,6 +38,24 @@ const isOutside = (path: string) =>
   path.startsWith("..\\") ||
   isAbsolute(path);
 
+const resolveMediaPath = (raw: unknown) => {
+  const rawPath = typeof raw === "string" ? raw : "";
+  const relativePath = normalize(rawPath);
+
+  if (!rawPath || !relativePath || isOutside(relativePath)) {
+    return null;
+  }
+
+  const cwd = process.cwd();
+  const absolutePath = resolve(cwd, relativePath);
+
+  if (isOutside(relative(cwd, absolutePath))) {
+    return null;
+  }
+
+  return { relativePath, absolutePath };
+};
+
 const createFileEntry = (stat: Stats | undefined, t: number): FileInfo => ({
   mt: stat?.mtimeMs || 0,
   sz: stat?.size || 0,
@@ -41,13 +65,33 @@ const createFileEntry = (stat: Stats | undefined, t: number): FileInfo => ({
 export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
 
+  const cacheDir = getDefaultCacheDir();
+  const metadataCache = await loadMetadataCache({
+    cacheDir,
+    key: process.cwd(),
+  });
   const { app, port, io } = await startServer(parseInt(options.port, 10));
   const fileMap = new Map<string, FileInfo>();
-  const thumbnailer = createThumbnailer({ cacheDir: getDefaultCacheDir() });
+  const thumbnailer = createThumbnailer({ cacheDir });
+  const posterer = createVideoPosterer({ cacheDir });
   const probeQueue = createQueue(4);
   const { promise: readyPromise, resolve: resolveReady } =
     withPromiseResolver<void>();
   let ready = false;
+
+  void pruneCache(cacheDir, {
+    maxBytes: parseCacheMaxBytes(process.env.VISORIUM_CACHE_MAX_BYTES),
+  })
+    .then((result) => {
+      if (result.removedFiles > 0) {
+        logger.info(
+          `Pruned ${result.removedFiles} cached files (${result.bytesBefore} -> ${result.bytesAfter} bytes)`,
+        );
+      }
+    })
+    .catch((error) => {
+      logger.error("Failed to prune cache", error);
+    });
 
   const batcher = createUpdateBatcher({
     intervalMs: 150,
@@ -71,22 +115,13 @@ export async function start(options: InitOptions) {
   );
 
   app.get("/thumb", async (req, res) => {
-    const rawPath = typeof req.query.path === "string" ? req.query.path : "";
-    const relativePath = normalize(rawPath);
-
-    if (!rawPath || !relativePath || isOutside(relativePath)) {
+    const resolved = resolveMediaPath(req.query.path);
+    if (!resolved) {
       res.status(400).end();
       return;
     }
 
-    const cwd = process.cwd();
-    const absolutePath = resolve(cwd, relativePath);
-
-    if (isOutside(relative(cwd, absolutePath))) {
-      res.status(400).end();
-      return;
-    }
-
+    const { relativePath, absolutePath } = resolved;
     const entry = fileMap.get(relativePath);
     if (!entry) {
       res.status(404).end();
@@ -119,6 +154,45 @@ export async function start(options: InitOptions) {
     res.sendFile(thumbnail.path, { headers });
   });
 
+  app.get("/poster", async (req, res) => {
+    const resolved = resolveMediaPath(req.query.path);
+    if (!resolved) {
+      res.status(400).end();
+      return;
+    }
+
+    const { relativePath, absolutePath } = resolved;
+    if (!videoRegExp.test(relativePath)) {
+      res.status(404).end();
+      return;
+    }
+
+    const entry = fileMap.get(relativePath);
+    if (!entry) {
+      res.status(404).end();
+      return;
+    }
+
+    const poster = await posterer.get({
+      sourcePath: absolutePath,
+      mtimeMs: entry.mt,
+      size: entry.sz ?? 0,
+      width: normalizeThumbnailWidth(req.query.w),
+    });
+
+    if (!poster) {
+      res.status(404).end();
+      return;
+    }
+
+    res.sendFile(poster.path, {
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
+  });
+
   logger.info(`Visorium server started on port ${port}`);
 
   io.on("connection", async (socket) => {
@@ -138,6 +212,7 @@ export async function start(options: InitOptions) {
       }
 
       entry.ar = aspectRatio;
+      metadataCache.set(path, entry.mt, entry.sz ?? 0, aspectRatio);
 
       if (ready) {
         batcher.set(path, entry);
@@ -162,6 +237,14 @@ export async function start(options: InitOptions) {
     .on("add", (path, stat) => {
       const t = counter++;
       const entry = createFileEntry(stat, t);
+      const cachedAspectRatio = metadataCache.get(
+        path,
+        entry.mt,
+        entry.sz ?? 0,
+      );
+      if (cachedAspectRatio) {
+        entry.ar = cachedAspectRatio;
+      }
       fileMap.set(path, entry);
 
       if (ready) {
@@ -169,11 +252,21 @@ export async function start(options: InitOptions) {
       }
 
       logger.info(`File added: ${path}`);
-      probe(path, entry);
+      if (!cachedAspectRatio) {
+        probe(path, entry);
+      }
     })
     .on("change", (path, stat) => {
       const t = fileMap.get(path)?.t ?? counter++;
       const entry = createFileEntry(stat, t);
+      const cachedAspectRatio = metadataCache.get(
+        path,
+        entry.mt,
+        entry.sz ?? 0,
+      );
+      if (cachedAspectRatio) {
+        entry.ar = cachedAspectRatio;
+      }
       fileMap.set(path, entry);
 
       if (ready) {
@@ -181,10 +274,13 @@ export async function start(options: InitOptions) {
       }
 
       logger.info(`File changed: ${path}`);
-      probe(path, entry);
+      if (!cachedAspectRatio) {
+        probe(path, entry);
+      }
     })
     .on("unlink", (path) => {
       fileMap.delete(path);
+      metadataCache.delete(path);
 
       if (ready) {
         batcher.delete(path);

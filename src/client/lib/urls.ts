@@ -18,3 +18,14 @@ export const toThumbnailUrl = (
     modifiedTime ?? 0
   }&w=${width}`;
 };
+
+export const toPosterUrl = (
+  origin: string,
+  name: string,
+  modifiedTime: number | undefined,
+  width = DEFAULT_THUMBNAIL_WIDTH,
+): string => {
+  return `${origin}/poster?path=${encodeURIComponent(name)}&v=${
+    modifiedTime ?? 0
+  }&w=${width}`;
+};
