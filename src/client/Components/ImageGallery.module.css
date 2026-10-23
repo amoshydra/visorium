@@ -1,0 +1,6 @@
+.noMatches {
+    padding: 3rem 1rem;
+    color: #777;
+    font-family: monospace;
+    text-align: center;
+}

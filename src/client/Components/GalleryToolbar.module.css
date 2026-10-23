@@ -1,0 +1,123 @@
+.toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    background: rgba(14, 14, 14, 0.92);
+    border-bottom: 1px solid #242424;
+    backdrop-filter: blur(12px);
+    font-family: system-ui, sans-serif;
+    font-size: 0.8125rem;
+    color: #999;
+}
+
+.search {
+    flex: 1 1 14rem;
+    min-width: 10rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid #333;
+    border-radius: 0.4rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+}
+
+.search::placeholder {
+    color: #666;
+}
+
+.segmented {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid #333;
+    border-radius: 0.4rem;
+}
+
+.segment {
+    padding: 0.4rem 0.6rem;
+    border: 0;
+    background: transparent;
+    color: #999;
+    font: inherit;
+    cursor: pointer;
+}
+
+.segment + .segment {
+    border-left: 1px solid #333;
+}
+
+.segment:hover {
+    color: #ddd;
+}
+
+.segment[data-active="true"] {
+    background: #2a2a2a;
+    color: #fff;
+}
+
+.control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.control select {
+    padding: 0.4rem 0.45rem;
+    border: 1px solid #333;
+    border-radius: 0.4rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    color-scheme: dark;
+}
+
+.orderButton {
+    min-width: 2.1rem;
+    padding: 0.4rem 0.45rem;
+    border: 1px solid #333;
+    border-radius: 0.4rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    cursor: pointer;
+}
+
+.orderButton:hover {
+    background: #242424;
+}
+
+.clear {
+    padding: 0.4rem 0.55rem;
+    border: 1px solid #3a3a3a;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: #aaa;
+    font: inherit;
+    cursor: pointer;
+}
+
+.clear:hover {
+    background: #222;
+    color: #fff;
+}
+
+.count {
+    margin-left: auto;
+    color: #777;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.search:focus-visible,
+.segment:focus-visible,
+.orderButton:focus-visible,
+.clear:focus-visible,
+.control select:focus-visible {
+    outline: 2px solid #6ea8fe;
+    outline-offset: 1px;
+}
