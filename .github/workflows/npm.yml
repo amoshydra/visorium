@@ -7,46 +7,70 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
+concurrency:
+  group: release-please-main
+  cancel-in-progress: false
+
 jobs:
-  release-please:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - name: Run release-please
         id: release
+        uses: googleapis/release-please-action@v4
         with:
           release-type: node
-          path: packages/browser-capture-screenshot
+          # A PAT can be supplied to let CI run on release-please PRs.
+          # Falls back to the workflow token for normal release creation.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
-      # The logic below handles the npm publication:
-      - name: Checkout
+      - name: Checkout release commit
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: actions/checkout@v4
-        # these if statements ensure that a publication only occurs when
-        # a new release is created:
-        if: ${{ steps.release.outputs.releases_created }}
+        with:
+          ref: ${{ steps.release.outputs.sha }}
+          fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
+      - name: Install pnpm
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: pnpm/action-setup@v4
         with:
           version: 10
           run_install: false
-        if: ${{ steps.release.outputs.releases_created }}
 
       - name: Install Node.js
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
-        if: ${{ steps.release.outputs.releases_created }}
 
       - name: Install dependencies
-        run: pnpm install
-      - name: Build
-        run: pnpm run build
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: pnpm install --frozen-lockfile
 
-      - run: npm publish
+      - name: Run tests
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: pnpm test
+
+      - name: Typecheck tests
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: pnpm test:typecheck
+
+      - name: Lint
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: pnpm lint
+
+      - name: Build
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: pnpm build
+
+      - name: Publish to npm
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-        if: ${{ steps.release.outputs.releases_created }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
