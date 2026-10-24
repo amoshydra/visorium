@@ -26,6 +26,9 @@ importers:
       masonic:
         specifier: ^4.0.1
         version: 4.0.1(react@19.1.0)
+      minimatch:
+        specifier: ^9.0.5
+        version: 9.0.5
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.1.0)

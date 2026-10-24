@@ -23,10 +23,13 @@ import type { FileInfo } from "../../shared/FileInfo.js";
 import { getMimeType } from "../../shared/mime.js";
 import { logger } from "../utils/logger.js";
 import { probeAspectRatio } from "../utils/media-prober.js";
+import { createScanFilter } from "../utils/scan-filter.js";
 
 interface InitOptions {
   port: string;
   ext: string[];
+  includeHidden: boolean;
+  ignore: string[];
 }
 
 let counter = 0;
@@ -64,6 +67,22 @@ const createFileEntry = (stat: Stats | undefined, t: number): FileInfo => ({
 
 export async function start(options: InitOptions) {
   logger.info("Starting Visorium...");
+
+  const scanFilter = createScanFilter({
+    includeHidden: options.includeHidden,
+    ignore: options.ignore,
+  });
+
+  if (options.includeHidden) {
+    logger.info("Including hidden files and folders.");
+  } else {
+    logger.info(
+      "Skipping hidden files and folders. Use --include-hidden to scan them.",
+    );
+  }
+  if (options.ignore.length > 0) {
+    logger.info(`Ignoring patterns: ${options.ignore.join(", ")}`);
+  }
 
   const cacheDir = getDefaultCacheDir();
   const metadataCache = await loadMetadataCache({
@@ -229,7 +248,7 @@ export async function start(options: InitOptions) {
 
   const watcher = chokidar.watch(".", {
     ignored: (file, stats) => {
-      if (file.includes(`${sep}node_modules${sep}`)) return true;
+      if (scanFilter(file)) return true;
       return !!(
         stats?.isFile() &&
         !mediaRegExp.test(file) &&
