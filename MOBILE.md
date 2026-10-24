@@ -22,11 +22,11 @@ desktop experience.
 
 ## Phase 3 — Mobile lightbox
 
-- [ ] Swipe left/right to navigate and swipe down to close
-- [ ] 44px close/navigation targets
-- [ ] Basename in the header, full path available as a title
-- [ ] Dynamic viewport height and safe-area insets
-- [ ] Reduced stage padding on phones
+- [x] Swipe left/right to navigate and swipe down to close
+- [x] 44px close/navigation targets
+- [x] Basename in the header, full path available as a title
+- [x] Dynamic viewport height and safe-area insets
+- [x] Reduced stage padding on phones
 
 ## Phase 4 — Mobile polish and verification
 
