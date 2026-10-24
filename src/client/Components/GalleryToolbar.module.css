@@ -77,6 +77,10 @@
     color: #fff;
 }
 
+.segment:active {
+    background: #242424;
+}
+
 .control {
     display: inline-flex;
     align-items: center;
@@ -113,6 +117,10 @@
     background: #242424;
 }
 
+.orderButton:active {
+    background: #2a2a2a;
+}
+
 .clear {
     padding: 0.4rem 0.55rem;
     border: 1px solid #3a3a3a;
@@ -121,6 +129,10 @@
     color: #aaa;
     font: inherit;
     cursor: pointer;
+}
+
+.clear:active {
+    background: #222;
 }
 
 .clear:hover {
@@ -145,7 +157,7 @@
     outline-offset: 1px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
     .toolbar {
         padding: 0.45rem 0.55rem;
         padding-top: calc(0.45rem + env(safe-area-inset-top));

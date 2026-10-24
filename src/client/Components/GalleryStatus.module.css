@@ -105,3 +105,15 @@
         animation: none;
     }
 }
+
+@media (max-width: 900px) {
+    .status {
+        min-height: 60vh;
+        padding-inline: 1.25rem;
+    }
+
+    .action {
+        min-height: 44px;
+        padding-inline: 1rem;
+    }
+}

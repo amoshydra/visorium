@@ -194,8 +194,30 @@
     font-variant-numeric: tabular-nums;
 }
 
-.openOriginal {
+.footerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     margin-left: auto;
+}
+
+.shareButton {
+    padding: 0.25rem 0.55rem;
+    border: 1px solid #333;
+    border-radius: 0.35rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.shareButton:active {
+    background: #242424;
+}
+
+.openOriginal {
+    margin-left: 0;
     color: #9cc4ff;
     text-decoration: none;
 }
@@ -211,7 +233,7 @@
     outline-offset: 2px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
     .panel {
         width: 100vw;
         height: 100vh;
@@ -238,6 +260,8 @@
 
     .stage {
         padding: 0.5rem;
+        padding-right: max(0.5rem, env(safe-area-inset-right));
+        padding-left: max(0.5rem, env(safe-area-inset-left));
     }
 
     .close {
@@ -248,15 +272,28 @@
         min-height: 44px;
     }
 
+    .close:active {
+        background: #242424;
+    }
+
     .navButton {
         width: 44px;
         height: 44px;
         font-size: 1.6rem;
     }
 
+    .navButton:active {
+        background: #2a2a2a;
+    }
+
     .openOriginal {
         display: inline-flex;
         align-items: center;
         min-height: 44px;
+    }
+
+    .shareButton {
+        min-height: 44px;
+        padding-inline: 0.7rem;
     }
 }

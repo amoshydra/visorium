@@ -30,9 +30,9 @@ desktop experience.
 
 ## Phase 4 — Mobile polish and verification
 
-- [ ] Safe areas for toolbar, sheet, lightbox, and grid bottom
-- [ ] Active-state feedback and touch target audit
-- [ ] Jump-to-top control on mobile
-- [ ] Share action where `navigator.share` is available
-- [ ] Verify 320 px, 390 px, landscape, and desktop
-- [ ] `pnpm test`, `pnpm test:typecheck`, `pnpm build`, `pnpm lint`
+- [x] Safe areas for toolbar, sheet, lightbox, and grid bottom
+- [x] Active-state feedback and touch target audit
+- [x] Jump-to-top control on mobile
+- [x] Share action where `navigator.share` is available
+- [x] Verify 320 px, 390 px, landscape, and desktop
+- [x] `pnpm test`, `pnpm test:typecheck`, `pnpm build`, `pnpm lint`

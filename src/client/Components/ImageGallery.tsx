@@ -17,6 +17,7 @@ import { GalleryLightbox } from "./GalleryLightbox";
 import { GalleryStatus } from "./GalleryStatus";
 import { GalleryToolbar } from "./GalleryToolbar";
 import { Media } from "./Media";
+import { ScrollToTop } from "./ScrollToTop";
 import css from "./ImageGallery.module.css";
 
 export function ImageGallery() {
@@ -34,7 +35,7 @@ export function ImageGallery() {
   );
   const [activeFile, setActiveFile] = useState<MediaInfo | null>(null);
   const viewportWidth = useViewportWidth();
-  const isMobile = viewportWidth <= 720;
+  const isMobile = viewportWidth <= 900;
   const { columnWidth } = getGridMetrics(
     viewportWidth,
     state.density,
@@ -166,6 +167,7 @@ export function ImageGallery() {
         onNavigate={setActiveFile}
         onClose={closeFile}
       />
+      <ScrollToTop />
     </>
   );
 }
