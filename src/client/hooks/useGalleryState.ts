@@ -20,6 +20,10 @@ export const useGalleryState = () => {
   }, []);
 
   const update = useCallback((patch: Partial<GalleryState>) => {
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
+
     setState((previous) => {
       const next = { ...previous, ...patch };
       const search = serializeGalleryState(next);
