@@ -3,6 +3,7 @@ import test from "node:test";
 import type { MediaInfo } from "../src/client/hooks/useFileServerSocket.types.js";
 import { ROOT_FOLDER, type GalleryState } from "../src/client/lib/gallery-state.js";
 import {
+  getChildFolders,
   getFolderOptions,
   hasActiveFilters,
   matchesFolder,
@@ -109,6 +110,19 @@ test("normalizes Windows-style separators", () => {
     getFolderOptions([media("sub\\deep\\a.jpg")]).map((folder) => folder.value),
     ["sub", "sub/deep"],
   );
+});
+
+test("lists only immediate child folders", () => {
+  const folders = getFolderOptions(files);
+  assert.deepEqual(
+    getChildFolders(folders, "").map((folder) => [folder.label, folder.value, folder.count]),
+    [["sub", "sub", 2]],
+  );
+  assert.deepEqual(
+    getChildFolders(folders, "sub").map((folder) => [folder.label, folder.value, folder.count]),
+    [["deep", "sub/deep", 1]],
+  );
+  assert.deepEqual(getChildFolders(folders, "sub/deep"), []);
 });
 
 test("detects active filters", () => {

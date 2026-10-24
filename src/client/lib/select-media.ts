@@ -60,6 +60,29 @@ export const getFolderOptions = (files: MediaInfo[]): FolderOption[] => {
   return options.sort((a, b) => collator.compare(a.label, b.label));
 };
 
+export const getChildFolders = (
+  folders: FolderOption[],
+  currentFolder: string,
+): FolderOption[] => {
+  const prefix = currentFolder ? `${currentFolder}/` : "";
+  const depth = currentFolder ? currentFolder.split("/").length : 0;
+
+  return folders
+    .filter((folder) => {
+      if (folder.value === ROOT_FOLDER) {
+        return false;
+      }
+      if (!folder.value.startsWith(prefix)) {
+        return false;
+      }
+      return folder.value.split("/").length === depth + 1;
+    })
+    .map((folder) => ({
+      ...folder,
+      label: folder.value.slice(prefix.length),
+    }));
+};
+
 export const hasActiveFilters = (state: GalleryState): boolean => {
   return state.query.trim() !== "" || state.type !== "all" || !!state.folder;
 };
