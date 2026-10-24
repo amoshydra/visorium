@@ -34,8 +34,20 @@ machine. To use it from a phone or another device on your network:
 npx visorium --host 0.0.0.0
 ```
 
-Then open `http://<your-machine-ip>:3000` on the other device. There is no
-authentication — only do this on a trusted network.
+Visorium generates an access token and prints login URLs in the terminal. Open
+one of those URLs — or open the bare address and enter the token on the login
+page. The token is stored in an `HttpOnly` cookie after login.
+
+Use a stable token if you want a bookmarked phone URL to keep working across
+restarts:
+
+```bash
+npx visorium --host 0.0.0.0 --token "a-long-random-value"
+```
+
+The token protects access, not traffic. Over plain HTTP on a trusted LAN, the
+token can be observed by a network attacker. For access beyond the LAN, put
+Visorium behind HTTPS (a tunnel or reverse proxy) and keep the token enabled.
 
 ### Hidden and ignored paths
 

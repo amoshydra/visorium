@@ -4,6 +4,11 @@ import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
 import { Time } from "time-chainer";
 import { startServer } from "../../server/index.js";
 import {
+  createAuth,
+  createToken,
+  getAuthUrls,
+} from "../../server/auth.js";
+import {
   parseCacheMaxBytes,
   pruneCache,
 } from "../../server/cache-prune.js";
@@ -27,12 +32,17 @@ import { createScanFilter } from "../utils/scan-filter.js";
 interface InitOptions {
   port: string;
   host: string;
+  token?: string;
   ext: string[];
   includeHidden: boolean;
   ignore: string[];
 }
 
 let counter = 0;
+
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
+
+const isLoopbackHost = (host: string) => LOOPBACK_HOSTS.has(host);
 
 const isOutside = (path: string) =>
   path === ".." ||
@@ -84,6 +94,12 @@ export async function start(options: InitOptions) {
     logger.info(`Ignoring patterns: ${options.ignore.join(", ")}`);
   }
 
+  const providedToken = options.token?.trim();
+  const token =
+    providedToken ||
+    (!isLoopbackHost(options.host) ? createToken() : null);
+  const auth = token ? createAuth(token) : null;
+
   const cacheDir = getDefaultCacheDir();
   const metadataCache = await loadMetadataCache({
     cacheDir,
@@ -92,9 +108,20 @@ export async function start(options: InitOptions) {
   const { app, port, host, io } = await startServer(
     parseInt(options.port, 10),
     options.host,
+    auth ?? undefined,
   );
   const displayHost =
     host === "0.0.0.0" || host === "::" ? "localhost" : host;
+
+  if (auth) {
+    logger.info("Authentication enabled.");
+    logger.info(`Access token: ${auth.token}`);
+    for (const url of getAuthUrls(auth.token, host, port)) {
+      logger.info(`Open: ${url}`);
+    }
+  } else {
+    logger.info("Authentication disabled (localhost only).");
+  }
   const fileMap = new Map<string, FileInfo>();
   const thumbnailer = createThumbnailer({ cacheDir });
   const posterer = createVideoPosterer({ cacheDir });
@@ -351,7 +378,7 @@ export async function start(options: InitOptions) {
       logger.info(`Visorium is ready: http://${displayHost}:${port}`);
       if (host === "0.0.0.0" || host === "::") {
         logger.info(
-          "Listening on all interfaces. Anyone on this network can access Visorium.",
+          "Listening on all interfaces. Access requires the token printed above.",
         );
       }
       resolveReady();
