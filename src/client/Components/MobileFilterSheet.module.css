@@ -1,0 +1,302 @@
+.dialog {
+    all: unset;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+}
+
+.dialog:not([open]) {
+    display: none;
+}
+
+.dialog::backdrop {
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(8px);
+}
+
+.sheet {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 85dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid #2a2a2a;
+    border-radius: 1rem 1rem 0 0;
+    background: #141414;
+    color: #ccc;
+    font-family: system-ui, sans-serif;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.handle {
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 0.25rem;
+    margin: 0.5rem auto 0.15rem;
+    border-radius: 999px;
+    background: #3a3a3a;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.9rem 0.65rem;
+    border-bottom: 1px solid #242424;
+}
+
+.title {
+    margin: 0;
+    color: #eee;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.05rem;
+    overflow-y: auto;
+    padding: 0.8rem 0.9rem 1rem;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.sectionLabel {
+    color: #777;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.segmented {
+    display: flex;
+    overflow: hidden;
+    border: 1px solid #333;
+    border-radius: 0.5rem;
+}
+
+.segment {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0.45rem 0.5rem;
+    border: 0;
+    background: transparent;
+    color: #999;
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.segment + .segment {
+    border-left: 1px solid #333;
+}
+
+.segment[data-active="true"] {
+    background: #2a2a2a;
+    color: #fff;
+}
+
+.segment:active {
+    background: #242424;
+}
+
+.field {
+    display: flex;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.select {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #333;
+    border-radius: 0.5rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    font-size: 0.875rem;
+    color-scheme: dark;
+}
+
+.orderButton {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid #333;
+    border-radius: 0.5rem;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    white-space: nowrap;
+    scrollbar-width: none;
+}
+
+.breadcrumb::-webkit-scrollbar {
+    display: none;
+}
+
+.crumb {
+    flex: 0 0 auto;
+    max-width: 12rem;
+    overflow: hidden;
+    padding: 0.25rem 0;
+    border: 0;
+    background: transparent;
+    color: #999;
+    font: inherit;
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.crumb[data-active="true"],
+.currentCrumb {
+    color: #ddd;
+    font-weight: 600;
+}
+
+.separator {
+    color: #555;
+    font-size: 0.8rem;
+}
+
+.folderList {
+    max-height: 30dvh;
+    overflow-y: auto;
+    border: 1px solid #2a2a2a;
+    border-radius: 0.5rem;
+}
+
+.folderRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.5rem 0.65rem;
+    border: 0;
+    border-bottom: 1px solid #222;
+    background: transparent;
+    color: #ccc;
+    font: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.folderRow:last-child {
+    border-bottom: 0;
+}
+
+.folderRow:active {
+    background: #1d1d1d;
+}
+
+.folderName {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folderCount {
+    flex: 0 0 auto;
+    color: #777;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+    flex: 0 0 auto;
+    color: #555;
+    font-size: 1rem;
+}
+
+.empty {
+    margin: 0;
+    padding: 0.5rem 0;
+    color: #666;
+    font-size: 0.78rem;
+}
+
+.footer {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.7rem 0.9rem 0.8rem;
+    border-top: 1px solid #242424;
+}
+
+.clearButton,
+.doneButton {
+    min-height: 44px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.5rem;
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.clearButton {
+    flex: 1 1 auto;
+    border: 1px solid #3a3a3a;
+    background: transparent;
+    color: #aaa;
+}
+
+.doneButton {
+    flex: 0 0 auto;
+    border: 1px solid #2f5f9f;
+    background: #1d3b63;
+    color: #e5f0ff;
+}
+
+.clearButton:active,
+.doneButton:active,
+.orderButton:active,
+.select:active {
+    background: #222;
+}
+
+.segment:focus-visible,
+.select:focus-visible,
+.orderButton:focus-visible,
+.crumb:focus-visible,
+.folderRow:focus-visible,
+.clearButton:focus-visible,
+.doneButton:focus-visible {
+    outline: 2px solid #6ea8fe;
+    outline-offset: 1px;
+}
+
+@media (min-width: 721px) {
+    .dialog {
+        display: none;
+    }
+}
