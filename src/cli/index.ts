@@ -1,5 +1,10 @@
+import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { start } from "./commands/start.js";
+
+const { version } = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 const program = new Command();
 
@@ -8,7 +13,7 @@ const collect = (value: string, previous: string[]) => [...previous, value];
 program
   .name("visorium")
   .description("Gallery server")
-  .version("1.0.0")
+  .version(version)
   .action(start)
   .option("-p, --port <number>", "Port to run the server on", "3000")
   .option(
