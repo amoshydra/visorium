@@ -21,6 +21,22 @@
     width: 100%;
 }
 
+.videoBadge {
+    position: absolute;
+    right: 0.35rem;
+    bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    font-size: 0.65rem;
+    pointer-events: none;
+}
+
 .tileButton {
     display: block;
     padding: 0;
@@ -38,4 +54,10 @@
     z-index: 1;
     outline: 2px solid #6ea8fe;
     outline-offset: 1px;
+}
+
+@media (max-width: 720px) {
+    .label {
+        display: none;
+    }
 }

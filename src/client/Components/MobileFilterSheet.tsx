@@ -35,9 +35,9 @@ const SORT_OPTIONS: Array<{ value: GallerySort; label: string }> = [
 ];
 
 const DENSITY_OPTIONS: Array<{ value: GalleryDensity; label: string }> = [
-  { value: "compact", label: "Compact" },
-  { value: "comfortable", label: "Comfortable" },
-  { value: "large", label: "Large" },
+  { value: "compact", label: "3 columns" },
+  { value: "comfortable", label: "2 columns" },
+  { value: "large", label: "1 column" },
 ];
 
 export const MobileFilterSheet = ({
