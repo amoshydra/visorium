@@ -13,12 +13,12 @@ desktop experience.
 
 ## Phase 2 — Mobile grid
 
-- [ ] Responsive column count: 2 columns by default, 1/3 via density
-- [ ] Hide filename captions on phones; details remain in the lightbox
-- [ ] Video play badge on poster tiles
-- [ ] 16px mobile search input to prevent iOS focus zoom
-- [ ] `srcSet` thumbnails sized for the rendered column width
-- [ ] Smaller lightbox preview on phones
+- [x] Responsive column count: 2 columns by default, 1/3 via density
+- [x] Hide filename captions on phones; details remain in the lightbox
+- [x] Video play badge on poster tiles
+- [x] 16px mobile search input to prevent iOS focus zoom
+- [x] `srcSet` thumbnails sized for the rendered column width
+- [x] Smaller lightbox preview on phones
 
 ## Phase 3 — Mobile lightbox
 

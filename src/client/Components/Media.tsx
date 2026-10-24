@@ -1,5 +1,6 @@
 import type { MediaInfo } from "../hooks/useFileServerSocket.types";
 import { getMediaKind } from "../lib/media-kind";
+import { toThumbnailUrl } from "../lib/urls";
 import css from "./Media.module.css";
 import { MediaError } from "./MediaError";
 import { MediaImage } from "./MediaImage";
@@ -7,12 +8,21 @@ import { MediaVideo } from "./MediaVideo";
 
 export interface MediaProps {
   data: MediaInfo;
+  columnWidth: number;
   onOpen: (file: MediaInfo) => void;
 }
 
-export const Media = ({ data, onOpen }: MediaProps) => {
-  const { name, src, thumbSrc, aspectRatio } = data;
+export const Media = ({ data, columnWidth, onOpen }: MediaProps) => {
+  const { name, src, thumbSrc, aspectRatio, mtime } = data;
   const kind = getMediaKind(name);
+  const thumbnailSrcSet = thumbSrc
+    ? [320, 640, 960, 1280]
+        .map(
+          (width) =>
+            `${toThumbnailUrl(window.location.origin, name, mtime, width)} ${width}w`,
+        )
+        .join(", ")
+    : undefined;
 
   const media =
     kind === "video" ? (
@@ -29,6 +39,8 @@ export const Media = ({ data, onOpen }: MediaProps) => {
         aspectRatio={aspectRatio}
         src={src}
         thumbnailSrc={thumbSrc}
+        srcSet={thumbnailSrcSet}
+        sizes={`${Math.ceil(columnWidth)}px`}
         alt={name}
       />
     ) : (
@@ -55,6 +67,11 @@ export const Media = ({ data, onOpen }: MediaProps) => {
         }}
       >
         {media}
+        {kind === "video" && (
+          <span className={css.videoBadge} aria-hidden="true">
+            ▶
+          </span>
+        )}
       </button>
     </figure>
   );

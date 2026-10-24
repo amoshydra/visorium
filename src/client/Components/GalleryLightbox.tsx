@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MediaInfo } from "../hooks/useFileServerSocket.types";
+import { useViewportWidth } from "../hooks/useViewportWidth";
 import {
   formatBytes,
   formatCount,
@@ -19,6 +20,7 @@ export interface GalleryLightboxProps {
 }
 
 const PREVIEW_WIDTH = 1600;
+const MOBILE_PREVIEW_WIDTH = 1280;
 
 export const GalleryLightbox = ({
   files,
@@ -28,6 +30,9 @@ export const GalleryLightbox = ({
 }: GalleryLightboxProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pushedHistory = useRef(false);
+  const viewportWidth = useViewportWidth();
+  const previewWidth =
+    viewportWidth <= 720 ? MOBILE_PREVIEW_WIDTH : PREVIEW_WIDTH;
   const isOpen = file !== null;
   const index = file
     ? files.findIndex((candidate) => candidate.name === file.name)
@@ -132,9 +137,14 @@ export const GalleryLightbox = ({
 
     const image = new Image();
     image.src = next.thumbSrc
-      ? toThumbnailUrl(window.location.origin, next.name, next.mtime, PREVIEW_WIDTH)
+      ? toThumbnailUrl(
+          window.location.origin,
+          next.name,
+          next.mtime,
+          previewWidth,
+        )
       : next.src;
-  }, [isOpen, index, files]);
+  }, [isOpen, index, files, previewWidth]);
 
   const position =
     index >= 0
@@ -177,6 +187,7 @@ export const GalleryLightbox = ({
             file={file}
             index={index}
             total={files.length}
+            previewWidth={previewWidth}
             onNavigate={navigate}
           />
         )}
@@ -189,6 +200,7 @@ interface LightboxContentProps {
   file: MediaInfo;
   index: number;
   total: number;
+  previewWidth: number;
   onNavigate: (offset: number) => void;
 }
 
@@ -196,6 +208,7 @@ const LightboxContent = ({
   file,
   index,
   total,
+  previewWidth,
   onNavigate,
 }: LightboxContentProps) => {
   const kind = getMediaKind(file.name);
@@ -204,7 +217,7 @@ const LightboxContent = ({
         window.location.origin,
         file.name,
         file.mtime,
-        PREVIEW_WIDTH,
+        previewWidth,
       )
     : file.src;
   const [imageSrc, setImageSrc] = useState(previewSrc);

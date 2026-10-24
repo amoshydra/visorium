@@ -9,8 +9,9 @@ import {
 import { ErrorBoundary } from "react-error-boundary";
 import { useFileServerSocket } from "../hooks/useFileServerSocket";
 import { useGalleryState } from "../hooks/useGalleryState";
+import { useViewportWidth } from "../hooks/useViewportWidth";
 import type { MediaInfo } from "../hooks/useFileServerSocket.types";
-import { DENSITY_WIDTHS } from "../lib/gallery-state";
+import { getGridMetrics } from "../lib/layout";
 import { getFolderOptions, selectMedia } from "../lib/select-media";
 import { GalleryLightbox } from "./GalleryLightbox";
 import { GalleryStatus } from "./GalleryStatus";
@@ -32,6 +33,13 @@ export function ImageGallery() {
     [files, viewState],
   );
   const [activeFile, setActiveFile] = useState<MediaInfo | null>(null);
+  const viewportWidth = useViewportWidth();
+  const isMobile = viewportWidth <= 720;
+  const { columnWidth } = getGridMetrics(
+    viewportWidth,
+    state.density,
+    isMobile,
+  );
 
   useEffect(() => {
     if (activeFile && !files.some((file) => file.name === activeFile.name)) {
@@ -52,9 +60,9 @@ export function ImageGallery() {
         return <></>;
       }
 
-      return <Media data={data} onOpen={openFile} />;
+      return <Media data={data} onOpen={openFile} columnWidth={columnWidth} />;
     },
-    [openFile],
+    [openFile, columnWidth],
   );
 
   if (files.length === 0) {
@@ -100,8 +108,6 @@ export function ImageGallery() {
       />
     );
   }
-
-  const columnWidth = DENSITY_WIDTHS[state.density];
 
   return (
     <>
