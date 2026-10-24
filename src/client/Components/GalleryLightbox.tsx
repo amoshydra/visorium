@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import type { MediaInfo } from "../hooks/useFileServerSocket.types";
 import { useViewportWidth } from "../hooks/useViewportWidth";
 import {
@@ -150,6 +156,7 @@ export const GalleryLightbox = ({
     index >= 0
       ? `${formatCount(index + 1)} / ${formatCount(files.length)}`
       : "";
+  const basename = file?.name.split("/").pop() ?? "";
 
   return (
     <dialog
@@ -172,7 +179,7 @@ export const GalleryLightbox = ({
         <header className={css.header}>
           <div className={css.heading}>
             <span className={css.title} title={file?.name}>
-              {file?.name ?? ""}
+              {basename}
             </span>
             <span className={css.position}>{position}</span>
           </div>
@@ -185,10 +192,10 @@ export const GalleryLightbox = ({
           <LightboxContent
             key={file.name}
             file={file}
-            index={index}
             total={files.length}
             previewWidth={previewWidth}
             onNavigate={navigate}
+            onClose={close}
           />
         )}
       </div>
@@ -198,20 +205,21 @@ export const GalleryLightbox = ({
 
 interface LightboxContentProps {
   file: MediaInfo;
-  index: number;
   total: number;
   previewWidth: number;
   onNavigate: (offset: number) => void;
+  onClose: () => void;
 }
 
 const LightboxContent = ({
   file,
-  index,
   total,
   previewWidth,
   onNavigate,
+  onClose,
 }: LightboxContentProps) => {
   const kind = getMediaKind(file.name);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const previewSrc = file.thumbSrc
     ? toThumbnailUrl(
         window.location.origin,
@@ -242,9 +250,48 @@ const LightboxContent = ({
     setImageFailed(true);
   };
 
+  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) {
+      touchStart.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+
+    if (!start || event.changedTouches.length === 0) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      onNavigate(dx < 0 ? 1 : -1);
+      return;
+    }
+
+    if (dy > 80 && Math.abs(dy) > Math.abs(dx)) {
+      onClose();
+    }
+  };
+
   return (
     <div className={css.content}>
-      <div className={css.stage}>
+      <div
+        className={css.stage}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={() => {
+          touchStart.current = null;
+        }}
+      >
         {kind === "image" && !imageFailed && (
           <div className={css.imageStage}>
             {file.thumbSrc && (
@@ -320,9 +367,6 @@ const LightboxContent = ({
         <span>{formatDimensions(dimensions?.width, dimensions?.height)}</span>
         <span>{formatBytes(file.size)}</span>
         <span>{formatDate(file.mtime)}</span>
-        <span className={css.footerPosition}>
-          {index >= 0 ? `${formatCount(index + 1)} / ${formatCount(total)}` : ""}
-        </span>
         <a
           className={css.openOriginal}
           href={file.src}
