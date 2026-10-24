@@ -12,6 +12,11 @@ program
   .action(start)
   .option("-p, --port <number>", "Port to run the server on", "3000")
   .option(
+    "--host <host>",
+    "Host to bind to (use 0.0.0.0 for LAN/phone access)",
+    "127.0.0.1",
+  )
+  .option(
     "--ext <string[]>",
     "Additional extension to include",
     (value) => value.split(",").map((str) => "." + str.replace(/^\./, "")),

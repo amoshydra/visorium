@@ -1,5 +1,4 @@
 import chokidar from "chokidar";
-import express from "express";
 import type { Stats } from "node:fs";
 import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
 import { Time } from "time-chainer";
@@ -27,6 +26,7 @@ import { createScanFilter } from "../utils/scan-filter.js";
 
 interface InitOptions {
   port: string;
+  host: string;
   ext: string[];
   includeHidden: boolean;
   ignore: string[];
@@ -89,7 +89,12 @@ export async function start(options: InitOptions) {
     cacheDir,
     key: process.cwd(),
   });
-  const { app, port, io } = await startServer(parseInt(options.port, 10));
+  const { app, port, host, io } = await startServer(
+    parseInt(options.port, 10),
+    options.host,
+  );
+  const displayHost =
+    host === "0.0.0.0" || host === "::" ? "localhost" : host;
   const fileMap = new Map<string, FileInfo>();
   const thumbnailer = createThumbnailer({ cacheDir });
   const posterer = createVideoPosterer({ cacheDir });
@@ -120,19 +125,35 @@ export async function start(options: InitOptions) {
     },
   });
 
-  app.use(
-    "/files",
-    express.static(process.cwd(), {
-      setHeaders: (res, path) => {
-        const contentType = getMimeType(path);
-        if (contentType) {
-          res.setHeader("Content-Type", contentType);
-        }
-      },
+  app.use("/files", (req, res) => {
+    let decodedPath: string;
+    try {
+      decodedPath = decodeURIComponent(req.path);
+    } catch {
+      res.status(400).end();
+      return;
+    }
+
+    if (decodedPath.includes("\0")) {
+      res.status(400).end();
+      return;
+    }
+
+    const relativePath = decodedPath.replace(/^\/+/, "");
+    const resolved = resolveMediaPath(relativePath);
+    if (!resolved || !fileMap.has(resolved.relativePath)) {
+      res.status(404).end();
+      return;
+    }
+
+    const contentType = getMimeType(resolved.absolutePath);
+
+    res.sendFile(resolved.absolutePath, {
       dotfiles: "allow",
       maxAge: Time.days(1),
-    }),
-  );
+      ...(contentType ? { headers: { "Content-Type": contentType } } : {}),
+    });
+  });
 
   app.get("/thumb", async (req, res) => {
     const resolved = resolveMediaPath(req.query.path);
@@ -216,7 +237,7 @@ export async function start(options: InitOptions) {
     });
   });
 
-  logger.info(`Visorium server started on port ${port}`);
+  logger.info(`Visorium server started on ${host}:${port}`);
 
   io.on("connection", async (socket) => {
     logger.info("Client connected");
@@ -327,7 +348,12 @@ export async function start(options: InitOptions) {
     })
     .on("ready", () => {
       ready = true;
-      logger.info(`Visorium is ready: http://localhost:${port}`);
+      logger.info(`Visorium is ready: http://${displayHost}:${port}`);
+      if (host === "0.0.0.0" || host === "::") {
+        logger.info(
+          "Listening on all interfaces. Anyone on this network can access Visorium.",
+        );
+      }
       resolveReady();
     });
 }

@@ -18,10 +18,11 @@ const io = new Server(httpServer, {
 export interface StartServerReturn {
   app: Express;
   port: number;
+  host: string;
   io: Server;
 }
 // Start the server
-export const startServer = (optionPort = 3000) => {
+export const startServer = (optionPort = 3000, optionHost = "127.0.0.1") => {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : optionPort;
 
   if (process.env.NODE_ENV === "development") {
@@ -42,8 +43,8 @@ export const startServer = (optionPort = 3000) => {
   }
 
   return new Promise<StartServerReturn>((resolve) => {
-    const server = httpServer.listen(port, "0.0.0.0", () => {
-      resolve({ app, port, io });
+    const server = httpServer.listen(port, optionHost, () => {
+      resolve({ app, port, host: optionHost, io });
     });
     ViteExpress.bind(app, server);
   });
