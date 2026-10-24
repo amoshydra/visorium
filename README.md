@@ -25,6 +25,30 @@ npx visorium
 
 open [`http://localhost:3000`](http://localhost:3000) in your browser.
 
+### Hidden and ignored paths
+
+Hidden paths are skipped by default. A path is hidden when any of its segments
+starts with `.` — for example `.thumbnails`, `.stickers`, `.aux`, or
+`.hidden.jpg`.
+
+Scan hidden files and folders:
+
+```bash
+npx visorium --include-hidden
+```
+
+Skip additional paths or globs (the flag is repeatable and still applies with
+`--include-hidden`):
+
+```bash
+npx visorium \
+  --ignore "**/.thumbnails/**" \
+  --ignore "**/.stickers/**"
+```
+
+`node_modules` is always skipped. These rules control what Visorium indexes and
+watches; they are not an access-control layer for `/files` URLs.
+
 ## Detail
 
 Visorium collect all images and video files and serves them in a gallery view.

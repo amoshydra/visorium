@@ -3,6 +3,8 @@ import { start } from "./commands/start.js";
 
 const program = new Command();
 
+const collect = (value: string, previous: string[]) => [...previous, value];
+
 program
   .name("visorium")
   .description("Gallery server")
@@ -13,6 +15,17 @@ program
     "--ext <string[]>",
     "Additional extension to include",
     (value) => value.split(",").map((str) => "." + str.replace(/^\./, "")),
+    [],
+  )
+  .option(
+    "--include-hidden",
+    "Scan hidden files and folders (for example .thumbnails or .stickers)",
+    false,
+  )
+  .option(
+    "--ignore <pattern>",
+    "Ignore a path or glob pattern (repeatable)",
+    collect,
     [],
   );
 program.parse();
