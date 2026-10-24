@@ -66,6 +66,15 @@ export function ImageGallery() {
     [openFile, columnWidth],
   );
 
+  const masonryKey = JSON.stringify([
+    deferredQuery,
+    state.type,
+    state.folder,
+    state.sort,
+    state.order,
+    state.density,
+  ]);
+
   if (files.length === 0) {
     if (status === "error") {
       return (
@@ -143,6 +152,7 @@ export function ImageGallery() {
         </div>
       ) : (
         <ErrorBoundary
+          resetKeys={[masonryKey]}
           fallbackRender={({ error, resetErrorBoundary }) => (
             <div>
               <p>Something went wrong:</p>
@@ -152,6 +162,7 @@ export function ImageGallery() {
           )}
         >
           <Masonry
+            key={masonryKey}
             columnWidth={columnWidth}
             itemHeightEstimate={Math.round(columnWidth * 0.75)}
             items={visibleFiles}
