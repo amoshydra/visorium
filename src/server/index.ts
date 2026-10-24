@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Auth } from "./auth.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -22,8 +23,24 @@ export interface StartServerReturn {
   io: Server;
 }
 // Start the server
-export const startServer = (optionPort = 3000, optionHost = "127.0.0.1") => {
+export const startServer = (
+  optionPort = 3000,
+  optionHost = "127.0.0.1",
+  auth?: Auth,
+) => {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : optionPort;
+
+  if (auth) {
+    app.use(express.urlencoded({ extended: false }));
+    app.use(auth.middleware);
+    io.use((socket, next) => {
+      if (auth.authorizeSocket(socket.request)) {
+        next();
+      } else {
+        next(new Error("unauthorized"));
+      }
+    });
+  }
 
   if (process.env.NODE_ENV === "development") {
     ViteExpress.config({

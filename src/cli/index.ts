@@ -23,6 +23,10 @@ program
     [],
   )
   .option(
+    "--token <token>",
+    "Access token for non-loopback hosts (required to access from other devices)",
+  )
+  .option(
     "--include-hidden",
     "Scan hidden files and folders (for example .thumbnails or .stickers)",
     false,
