@@ -25,6 +25,18 @@ npx visorium
 
 open [`http://localhost:3000`](http://localhost:3000) in your browser.
 
+### Network access
+
+By default Visorium binds to `127.0.0.1`, so it is only reachable from the same
+machine. To use it from a phone or another device on your network:
+
+```bash
+npx visorium --host 0.0.0.0
+```
+
+Then open `http://<your-machine-ip>:3000` on the other device. There is no
+authentication — only do this on a trusted network.
+
 ### Hidden and ignored paths
 
 Hidden paths are skipped by default. A path is hidden when any of its segments
@@ -46,8 +58,8 @@ npx visorium \
   --ignore "**/.stickers/**"
 ```
 
-`node_modules` is always skipped. These rules control what Visorium indexes and
-watches; they are not an access-control layer for `/files` URLs.
+`node_modules` is always skipped. `/files` only serves media that Visorium has
+indexed, so hidden, ignored, and non-media files return `404` there.
 
 ## Detail
 
