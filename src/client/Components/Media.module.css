@@ -56,7 +56,11 @@
     outline-offset: 1px;
 }
 
-@media (max-width: 720px) {
+.tileButton:active {
+    opacity: 0.86;
+}
+
+@media (max-width: 900px) {
     .label {
         display: none;
     }

@@ -35,9 +35,9 @@ const SORT_OPTIONS: Array<{ value: GallerySort; label: string }> = [
 ];
 
 const DENSITY_OPTIONS: Array<{ value: GalleryDensity; label: string }> = [
-  { value: "compact", label: "3 columns" },
-  { value: "comfortable", label: "2 columns" },
-  { value: "large", label: "1 column" },
+  { value: "compact", label: "Compact" },
+  { value: "comfortable", label: "Comfortable" },
+  { value: "large", label: "Large" },
 ];
 
 export const MobileFilterSheet = ({
@@ -61,7 +61,7 @@ export const MobileFilterSheet = ({
 
     dialog.showModal();
 
-    const desktop = window.matchMedia("(min-width: 721px)");
+    const desktop = window.matchMedia("(min-width: 901px)");
     const handleDesktop = () => {
       if (desktop.matches) {
         onClose();

@@ -38,7 +38,7 @@ export const GalleryLightbox = ({
   const pushedHistory = useRef(false);
   const viewportWidth = useViewportWidth();
   const previewWidth =
-    viewportWidth <= 720 ? MOBILE_PREVIEW_WIDTH : PREVIEW_WIDTH;
+    viewportWidth <= 900 ? MOBILE_PREVIEW_WIDTH : PREVIEW_WIDTH;
   const isOpen = file !== null;
   const index = file
     ? files.findIndex((candidate) => candidate.name === file.name)
@@ -234,6 +234,9 @@ const LightboxContent = ({
     width: number;
     height: number;
   } | null>(null);
+  const canShare =
+    typeof navigator !== "undefined" &&
+    typeof navigator.share === "function";
 
   useEffect(() => {
     setImageSrc(previewSrc);
@@ -367,14 +370,29 @@ const LightboxContent = ({
         <span>{formatDimensions(dimensions?.width, dimensions?.height)}</span>
         <span>{formatBytes(file.size)}</span>
         <span>{formatDate(file.mtime)}</span>
-        <a
-          className={css.openOriginal}
-          href={file.src}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open original
-        </a>
+        <div className={css.footerActions}>
+          {canShare && (
+            <button
+              type="button"
+              className={css.shareButton}
+              onClick={() => {
+                void navigator
+                  .share({ title: file.name, url: file.src })
+                  .catch(() => {});
+              }}
+            >
+              Share
+            </button>
+          )}
+          <a
+            className={css.openOriginal}
+            href={file.src}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open original
+          </a>
+        </div>
       </footer>
     </div>
   );
