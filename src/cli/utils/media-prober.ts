@@ -1,5 +1,6 @@
 import { imageRegExp, videoRegExp } from "../../shared/file-extension.js";
 import { ffprobe } from "./ffprobe.js";
+import { logger } from "./logger.js";
 import { sharp } from "./sharp.js";
 
 type AspectRatio = `${number}/${number}`;
@@ -16,7 +17,7 @@ export const probeAspectRatio = async (
     }
     return undefined;
   } catch (e) {
-    console.error("Error probing aspect ratio:", e);
+    logger.probeError(path, e);
     return undefined;
   }
 };

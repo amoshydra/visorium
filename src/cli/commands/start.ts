@@ -306,6 +306,7 @@ export async function start(options: InitOptions) {
     });
   };
 
+  const scanStartedAt = Date.now();
   const watcher = chokidar.watch(".", {
     ignored: (file, stats) => {
       if (scanFilter(file)) return true;
@@ -337,7 +338,7 @@ export async function start(options: InitOptions) {
         batcher.set(path, entry);
       }
 
-      logger.info(`File added: ${path}`);
+      logger.fileAdded(path);
       if (!cachedAspectRatio) {
         probe(path, entry);
       }
@@ -359,7 +360,7 @@ export async function start(options: InitOptions) {
         batcher.set(path, entry);
       }
 
-      logger.info(`File changed: ${path}`);
+      logger.fileChanged(path);
       if (!cachedAspectRatio) {
         probe(path, entry);
       }
@@ -372,7 +373,7 @@ export async function start(options: InitOptions) {
         batcher.delete(path);
       }
 
-      logger.info(`File removed: ${path}`);
+      logger.fileRemoved(path);
     })
     .on("error", (error) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -387,6 +388,7 @@ export async function start(options: InitOptions) {
     })
     .on("ready", () => {
       ready = true;
+      logger.activityReady(fileMap.size, Date.now() - scanStartedAt);
       const viewerPath = options.vr ? "/?view=vr" : "/";
       logger.info(
         `Visorium is ready: http://${displayHost}:${port}${viewerPath}`,

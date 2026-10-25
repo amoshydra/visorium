@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 const getFfprobe = async () => {
   try {
     const { default: ffprobe } = await import("ffprobe-client");
@@ -19,8 +21,11 @@ const getFfprobe = async () => {
     return async (path: string) => {
       return await ffprobe(path, ffprobePath ? { path: ffprobePath } : {});
     };
-  } catch (error) {
-    console.error("Error initializing ffprobe:", error);
+  } catch {
+    logger.warnOnce(
+      "ffprobe",
+      "Optional ffprobe is unavailable; video aspect ratios will be skipped.",
+    );
     return async () => {
       return Promise.resolve(null);
     };

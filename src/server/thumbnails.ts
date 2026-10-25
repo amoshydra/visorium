@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, rename, stat, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { logger } from "../cli/utils/logger.js";
 import { createQueue } from "./queue.js";
 
 export const THUMBNAIL_WIDTHS = [160, 320, 480, 640, 960, 1280, 1600, 2048];
@@ -120,6 +121,10 @@ const loadSharp = async (): Promise<SharpFactory | null> => {
 
     return module.default ?? module;
   } catch {
+    logger.warnOnce(
+      "sharp",
+      "Optional sharp is unavailable; image metadata and thumbnail generation will use fallbacks.",
+    );
     return null;
   }
 };
