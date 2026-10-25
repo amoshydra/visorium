@@ -13,6 +13,7 @@ export default defineConfig({
   root: join(__dirname, "src/client"),
   build: {
     outDir: join(__dirname, "dist"),
+    emptyOutDir: true,
     rollupOptions: {
       external:
         process.env.VITE_VISORIUM_MODE === "demo"
