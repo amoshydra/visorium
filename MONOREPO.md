@@ -67,6 +67,19 @@ Open `http://127.0.0.1:3000/?view=vr`. The flat gallery also exposes an
 passes its existing file list and active item to the viewer; the viewer does
 not open a second socket.
 
+### `visorium` vs `visorium vr`
+
+- `visorium` starts in flat gallery mode. If spatial support is installed, the
+  gallery exposes the 3D/VR button and loads the viewer on demand.
+- Without spatial support, clicking a 3D model or opening `?view=vr` shows the
+  install prompt; normal images and videos are unaffected.
+- `visorium vr` requires spatial support and starts with `?view=vr`, so the 3D
+  gallery opens automatically. If support is missing, the CLI prints the npx
+  install command.
+- Both modes use the same server, authentication, file index, and socket. The
+  flag only changes the initial UI mode and whether spatial support is
+  required.
+
 The core build and spatial build are separate:
 
 ```bash

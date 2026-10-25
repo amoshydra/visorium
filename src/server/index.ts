@@ -42,10 +42,14 @@ export const startServer = async (
     });
   }
 
-  if (spatialDir) {
-    app.get("/api/capabilities", (_req, res) => {
-      res.json({ spatial: true, assetsBase: "/spatial/" });
+  app.get("/api/capabilities", (_req, res) => {
+    res.json({
+      spatial: Boolean(spatialDir),
+      assetsBase: spatialDir ? "/spatial/" : null,
     });
+  });
+
+  if (spatialDir) {
     app.use(
       "/spatial",
       express.static(spatialDir, {

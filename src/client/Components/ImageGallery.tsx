@@ -20,6 +20,7 @@ import { GalleryStatus } from "./GalleryStatus";
 import { GalleryToolbar } from "./GalleryToolbar";
 import { Media } from "./Media";
 import { ScrollToTop } from "./ScrollToTop";
+import { SpatialInstallPrompt } from "./SpatialInstallPrompt";
 import { SpatialOverlay } from "./SpatialOverlay";
 import css from "./ImageGallery.module.css";
 
@@ -39,6 +40,8 @@ export function ImageGallery() {
   const [activeFile, setActiveFile] = useState<MediaInfo | null>(null);
   const [spatialBase, setSpatialBase] = useState<string | null>(null);
   const [spatialOpen, setSpatialOpen] = useState(false);
+  const [installPromptOpen, setInstallPromptOpen] = useState(false);
+  const [capabilityChecked, setCapabilityChecked] = useState(false);
   const [vrRequested] = useState(
     () => new URLSearchParams(window.location.search).get("view") === "vr",
   );
@@ -58,9 +61,11 @@ export function ImageGallery() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetchSpatialCapability(controller.signal).then((capability) => {
-      if (capability) setSpatialBase(capability.assetsBase);
-    });
+    void fetchSpatialCapability(controller.signal)
+      .then((capability) => {
+        if (capability) setSpatialBase(capability.assetsBase);
+      })
+      .finally(() => setCapabilityChecked(true));
     return () => controller.abort();
   }, []);
 
@@ -70,12 +75,22 @@ export function ImageGallery() {
     }
   }, [files.length, spatialBase, vrRequested]);
 
+  useEffect(() => {
+    if (vrRequested && capabilityChecked && !spatialBase) {
+      setInstallPromptOpen(true);
+    }
+  }, [capabilityChecked, spatialBase, vrRequested]);
+
   const openFile = useCallback(
     (file: MediaInfo) => {
       const kind = getMediaKind(file.name);
-      if ((kind === "model" || kind === "splat") && spatialBase) {
-        setActiveFile(file);
-        setSpatialOpen(true);
+      if (kind === "model" || kind === "splat") {
+        if (spatialBase) {
+          setActiveFile(file);
+          setSpatialOpen(true);
+        } else {
+          setInstallPromptOpen(true);
+        }
         return;
       }
       setActiveFile(file);
@@ -241,6 +256,9 @@ export function ImageGallery() {
             setActiveFile(null);
           }}
         />
+      )}
+      {installPromptOpen && (
+        <SpatialInstallPrompt onClose={() => setInstallPromptOpen(false)} />
       )}
       <ScrollToTop />
     </>
