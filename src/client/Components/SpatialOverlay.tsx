@@ -5,6 +5,7 @@ interface SpatialMountOptions {
   container: HTMLElement;
   media: MediaInfo[];
   activeIndex: number;
+  initialFocus: boolean;
   onNavigate: (index: number) => void;
   onClose: () => void;
 }
@@ -67,6 +68,7 @@ export const SpatialOverlay = ({
           container,
           media: current.files,
           activeIndex,
+          initialFocus: current.activeFile != null,
           onNavigate: (index) => {
             const file = latest.current.files[index];
             if (file) latest.current.onNavigate(file);

@@ -8,6 +8,7 @@ export interface SpatialViewerOptions {
   container: HTMLElement;
   media: SpatialMedia[];
   activeIndex?: number;
+  initialFocus?: boolean;
   onNavigate?: (index: number) => void;
   onClose?: () => void;
 }
@@ -31,6 +32,7 @@ export function mountSpatialViewer(
     <SpatialApp
       media={options.media}
       activeIndex={options.activeIndex}
+      initialFocus={options.initialFocus}
       onNavigate={options.onNavigate}
       onClose={options.onClose}
       store={store}

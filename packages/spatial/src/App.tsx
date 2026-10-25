@@ -1,10 +1,6 @@
 import { OrbitControls, useGLTF, useTexture } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import {
-  XR,
-  useXR,
-  type XRStore,
-} from "@react-three/xr";
+import { XR, useXR, type XRStore } from "@react-three/xr";
 import {
   Component,
   Suspense,
@@ -17,6 +13,7 @@ import {
 import {
   BackSide,
   Box3,
+  CanvasTexture,
   DoubleSide,
   SRGBColorSpace,
   Vector3,
@@ -28,17 +25,33 @@ export interface SpatialMedia {
   name: string;
   src: string;
   aspectRatio?: string;
+  thumbSrc?: string;
+  posterSrc?: string;
 }
 
 interface SpatialAppProps {
   media: SpatialMedia[];
   activeIndex?: number;
+  initialFocus?: boolean;
   onNavigate?: (index: number) => void;
   onClose?: () => void;
   store: XRStore;
 }
 
 type MediaKind = "image" | "video" | "model" | "splat" | "unsupported";
+type ViewMode = "gallery" | "focus";
+
+const PAGE_SIZE = 12;
+const COLUMNS = 4;
+
+const buttonStyle = {
+  background: "rgba(255,255,255,0.12)",
+  color: "#fff",
+  border: "1px solid rgba(255,255,255,0.28)",
+  borderRadius: 6,
+  padding: "6px 10px",
+  cursor: "pointer",
+} as const;
 
 const imagePattern = /\.(bmp|gif|jpe?g|png|tiff?|webp|heic|heif|ico|svg|dds|raw)$/i;
 const videoPattern = /\.(mp4|mov|avi|mkv|flv|wmv|webm|3gp|3g2)$/i;
@@ -62,19 +75,36 @@ const parseAspectRatio = (value: string | undefined) => {
   return width > 0 && height > 0 ? width / height : 1;
 };
 
+const getThumbnailSource = (media: SpatialMedia, kind: MediaKind) => {
+  if (kind === "image") return media.thumbSrc ?? media.src;
+  if (kind === "video") return media.posterSrc ?? media.thumbSrc;
+  return undefined;
+};
+
 export function SpatialApp({
   media,
   activeIndex = 0,
+  initialFocus = false,
   onNavigate,
   onClose,
   store,
 }: SpatialAppProps) {
-  const [index, setIndex] = useState(() =>
-    media.length > 0 ? Math.min(Math.max(activeIndex, 0), media.length - 1) : 0,
+  const initialIndex =
+    media.length > 0 ? Math.min(Math.max(activeIndex, 0), media.length - 1) : 0;
+  const [index, setIndex] = useState(initialIndex);
+  const [mode, setMode] = useState<ViewMode>(
+    initialFocus ? "focus" : "gallery",
   );
+  const [page, setPage] = useState(() => Math.floor(initialIndex / PAGE_SIZE));
   const [xrSupported, setXrSupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const current = media[index];
+  const kind = current ? getKind(current.name) : "unsupported";
+  const spatialCapture =
+    current != null &&
+    (kind === "image" || kind === "video") &&
+    isSpatialCapture(current.name);
+  const pageCount = Math.max(1, Math.ceil(media.length / PAGE_SIZE));
 
   useEffect(() => {
     let active = true;
@@ -91,7 +121,22 @@ export function SpatialApp({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose?.();
+      if (event.key === "Escape") {
+        if (mode === "focus") {
+          setPage(Math.floor(index / PAGE_SIZE));
+          setMode("gallery");
+        } else {
+          onClose?.();
+        }
+        return;
+      }
+
+      if (mode === "gallery") {
+        if (event.key === "ArrowLeft") changePage(-1);
+        if (event.key === "ArrowRight") changePage(1);
+        return;
+      }
+
       if (event.key === "ArrowLeft") navigate(-1);
       if (event.key === "ArrowRight") navigate(1);
     };
@@ -106,19 +151,31 @@ export function SpatialApp({
     onNavigate?.(next);
   };
 
+  const changePage = (delta: number) => {
+    setPage((current) => (current + delta + pageCount) % pageCount);
+  };
+
+  const openMedia = (nextIndex: number) => {
+    setIndex(nextIndex);
+    setPage(Math.floor(nextIndex / PAGE_SIZE));
+    setMode("focus");
+    onNavigate?.(nextIndex);
+  };
+
+  const backToGallery = () => {
+    setPage(Math.floor(index / PAGE_SIZE));
+    setMode("gallery");
+  };
+
   const enterVr = async () => {
     try {
       await store.enterVR();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(
+        cause instanceof Error ? cause.message : String(cause),
+      );
     }
   };
-
-  const kind = current ? getKind(current.name) : "unsupported";
-  const spatialCapture =
-    current != null &&
-    (kind === "image" || kind === "video") &&
-    isSpatialCapture(current.name);
 
   return (
     <div
@@ -132,7 +189,7 @@ export function SpatialApp({
       }}
     >
       <Canvas
-        camera={{ position: [0, 1.5, 3], fov: 50 }}
+        camera={{ position: [0, 1.6, 1.8], fov: 50 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true }}
         style={{ width: "100%", height: "100%" }}
@@ -142,17 +199,25 @@ export function SpatialApp({
           <ambientLight intensity={1.4} />
           <directionalLight position={[4, 6, 5]} intensity={2.2} />
           <hemisphereLight args={["#ffffff", "#242424", 1.2]} />
-          <CameraRig spatial={spatialCapture} />
+          <CameraRig mode={mode} spatial={spatialCapture} />
           <SceneErrorBoundary>
             <Suspense fallback={null}>
-              <MediaScene
-                media={current}
-                kind={kind}
-                spatialCapture={spatialCapture}
-              />
+              {mode === "gallery" ? (
+                <GalleryWall
+                  media={media}
+                  page={page}
+                  onOpen={openMedia}
+                />
+              ) : (
+                <MediaScene
+                  media={current}
+                  kind={kind}
+                  spatialCapture={spatialCapture}
+                />
+              )}
             </Suspense>
           </SceneErrorBoundary>
-          <DesktopControls disabled={spatialCapture} />
+          <DesktopControls disabled={mode === "gallery" || spatialCapture} />
         </XR>
       </Canvas>
 
@@ -168,25 +233,65 @@ export function SpatialApp({
           flexWrap: "wrap",
         }}
       >
-        <button type="button" onClick={() => navigate(-1)} disabled={media.length < 2}>
-          ←
-        </button>
-        <button type="button" onClick={() => navigate(1)} disabled={media.length < 2}>
-          →
-        </button>
-        <strong style={{ marginLeft: 8, overflow: "hidden", textOverflow: "ellipsis" }}>
-          {current?.name ?? "No media"}
-        </strong>
-        <span style={{ opacity: 0.6 }}>
-          {media.length > 0 ? `${index + 1} / ${media.length}` : ""}
-        </span>
+        {mode === "gallery" ? (
+          <>
+            <strong>3D gallery</strong>
+            <button
+              type="button"
+              style={buttonStyle}
+              onClick={() => changePage(-1)}
+              disabled={pageCount < 2}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              style={buttonStyle}
+              onClick={() => changePage(1)}
+              disabled={pageCount < 2}
+            >
+              ›
+            </button>
+            <span style={{ opacity: 0.65 }}>
+              Page {page + 1} / {pageCount} · {media.length} items
+            </span>
+          </>
+        ) : (
+          <>
+            <button type="button" style={buttonStyle} onClick={backToGallery}>
+              Gallery
+            </button>
+            <button
+              type="button"
+              style={buttonStyle}
+              onClick={() => navigate(-1)}
+              disabled={media.length < 2}
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              style={buttonStyle}
+              onClick={() => navigate(1)}
+              disabled={media.length < 2}
+            >
+              →
+            </button>
+            <strong style={{ marginLeft: 4, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {current?.name ?? "No media"}
+            </strong>
+            <span style={{ opacity: 0.6 }}>
+              {media.length > 0 ? `${index + 1} / ${media.length}` : ""}
+            </span>
+          </>
+        )}
         <span style={{ flex: 1 }} />
         {xrSupported && (
-          <button type="button" onClick={() => void enterVr()}>
+          <button type="button" style={buttonStyle} onClick={() => void enterVr()}>
             Enter VR
           </button>
         )}
-        <button type="button" onClick={() => onClose?.()}>
+        <button type="button" style={buttonStyle} onClick={() => onClose?.()}>
           Close
         </button>
       </div>
@@ -196,18 +301,20 @@ export function SpatialApp({
           position: "absolute",
           left: 16,
           bottom: 16,
-          maxWidth: 480,
+          maxWidth: 560,
           opacity: 0.8,
           fontSize: 13,
         }}
       >
-        {kind === "splat"
-          ? "Splat preview is not implemented yet."
-          : kind === "unsupported"
-            ? "Unsupported media type."
-            : spatialCapture
-              ? "360/180 spatial preview. Drag to look around."
-              : "Drag to orbit. Use arrow keys to navigate."}
+        {mode === "gallery"
+          ? "Select a card to enter focus view. Use the arrow keys to change page."
+          : kind === "splat"
+            ? "Splat preview is not implemented yet."
+            : kind === "unsupported"
+              ? "Unsupported media type."
+              : spatialCapture
+                ? "360/180 spatial preview. Drag to look around."
+                : "Drag to orbit. Use arrow keys to navigate."}
         {error ? <div style={{ color: "#ff9b9b", marginTop: 8 }}>{error}</div> : null}
       </div>
     </div>
@@ -226,11 +333,14 @@ function DesktopControls({ disabled }: { disabled: boolean }) {
   );
 }
 
-function CameraRig({ spatial }: { spatial: boolean }) {
+function CameraRig({ mode, spatial }: { mode: ViewMode; spatial: boolean }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    if (spatial) {
+    if (mode === "gallery") {
+      camera.position.set(0, 1.6, 1.8);
+      camera.lookAt(0, 1.55, -2.5);
+    } else if (spatial) {
       camera.position.set(0, 1.6, 0);
       camera.lookAt(0, 1.6, -1);
     } else {
@@ -238,9 +348,131 @@ function CameraRig({ spatial }: { spatial: boolean }) {
       camera.lookAt(0, 1.2, 0);
     }
     camera.updateProjectionMatrix();
-  }, [camera, spatial]);
+  }, [camera, mode, spatial]);
 
   return null;
+}
+
+interface GalleryWallProps {
+  media: SpatialMedia[];
+  page: number;
+  onOpen: (index: number) => void;
+}
+
+function GalleryWall({ media, page, onOpen }: GalleryWallProps) {
+  const start = page * PAGE_SIZE;
+  const visible = media.slice(start, start + PAGE_SIZE);
+
+  return (
+    <group position={[0, 0, -2.5]}>
+      {visible.map((item, index) => {
+        const column = index % COLUMNS;
+        const row = Math.floor(index / COLUMNS);
+        const x = (column - (COLUMNS - 1) / 2) * 0.95;
+        const y = 1.55 + (1 - row) * 0.78;
+        return (
+          <GalleryCard
+            key={item.name}
+            media={item}
+            position={[x, y, 0]}
+            onOpen={() => onOpen(start + index)}
+          />
+        );
+      })}
+    </group>
+  );
+}
+
+function GalleryCard({
+  media,
+  position,
+  onOpen,
+}: {
+  media: SpatialMedia;
+  position: [number, number, number];
+  onOpen: () => void;
+}) {
+  const kind = getKind(media.name);
+  const source = getThumbnailSource(media, kind);
+
+  return (
+    <group position={position}>
+      {source ? (
+        <Suspense fallback={<PlaceholderCard label={labelFor(kind, media.name)} />}>
+          <TexturedCard source={source} onOpen={onOpen} />
+        </Suspense>
+      ) : (
+        <PlaceholderCard label={labelFor(kind, media.name)} onOpen={onOpen} />
+      )}
+    </group>
+  );
+}
+
+function TexturedCard({
+  source,
+  onOpen,
+}: {
+  source: string;
+  onOpen: () => void;
+}) {
+  const texture = useTexture(source, (loaded) => {
+    loaded.colorSpace = SRGBColorSpace;
+  });
+
+  return (
+    <mesh onClick={onOpen} onPointerOver={() => (document.body.style.cursor = "pointer")} onPointerOut={() => (document.body.style.cursor = "default")}>
+      <planeGeometry args={[0.82, 0.64]} />
+      <meshBasicMaterial map={texture} toneMapped={false} side={DoubleSide} />
+    </mesh>
+  );
+}
+
+function PlaceholderCard({
+  label,
+  onOpen,
+}: {
+  label: string;
+  onOpen?: () => void;
+}) {
+  const texture = useMemo(() => makeTextTexture(label), [label]);
+
+  return (
+    <mesh onClick={onOpen} onPointerOver={() => (document.body.style.cursor = "pointer")} onPointerOut={() => (document.body.style.cursor = "default")}>
+      <planeGeometry args={[0.82, 0.64]} />
+      <meshBasicMaterial map={texture} toneMapped={false} side={DoubleSide} />
+    </mesh>
+  );
+}
+
+function makeTextTexture(label: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 400;
+  const context = canvas.getContext("2d");
+  if (context) {
+    context.fillStyle = "#1c1c1f";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = "rgba(255,255,255,0.25)";
+    context.lineWidth = 8;
+    context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+    context.fillStyle = "#d8d8e0";
+    context.font = "bold 44px system-ui, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(label, canvas.width / 2, canvas.height / 2);
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function labelFor(kind: MediaKind, name: string) {
+  if (kind === "model") return "3D";
+  if (kind === "splat") return "SPLAT";
+  if (kind === "video") return "VIDEO";
+  if (kind === "unsupported") return "UNSUPPORTED";
+  return name.split(".").pop()?.toUpperCase() ?? "MEDIA";
 }
 
 interface MediaSceneProps {

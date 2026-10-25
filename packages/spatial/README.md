@@ -5,7 +5,8 @@ Optional spatial and VR viewer assets for Visorium.
 This package is currently **private** while the spatial viewer is being
 developed. It contains an initial lazy-loaded viewer for:
 
-- GLB/GLTF models
+- a 3D gallery wall with lazy image/video thumbnails and 3D/splat cards
+- a focus view for GLB/GLTF models
 - images and videos on 3D panels
 - 360/180 captures detected by filename
 - an `Enter VR` control when WebXR is supported
