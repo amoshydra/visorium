@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/amoshydra/visorium/compare/v1.1.0...v1.1.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* throttle watcher activity logging ([92db31b](https://github.com/amoshydra/visorium/commit/92db31bbe0895dd671282a9a4d817c8ee6fcf0b9))
+
 ## [1.1.0](https://github.com/amoshydra/visorium/compare/v1.0.0...v1.1.0) (2026-10-25)
 
 
