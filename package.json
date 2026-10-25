@@ -3,6 +3,10 @@
   "version": "0.1.10",
   "type": "module",
   "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amoshydra/visorium.git"
+  },
   "bin": {
     "visorium": "./bin/cli.js"
   },
