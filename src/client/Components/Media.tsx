@@ -43,6 +43,13 @@ export const Media = ({ data, columnWidth, onOpen }: MediaProps) => {
         sizes={`${Math.ceil(columnWidth)}px`}
         alt={name}
       />
+    ) : kind === "model" || kind === "splat" ? (
+      <div className={css.spatialPlaceholder}>
+        <span className={css.spatialIcon} aria-hidden="true">
+          {kind === "model" ? "3D" : "◌"}
+        </span>
+        <span>{kind === "model" ? "3D model" : "Splat"}</span>
+      </div>
     ) : (
       <MediaError
         link={false}
@@ -58,7 +65,7 @@ export const Media = ({ data, columnWidth, onOpen }: MediaProps) => {
       <button
         type="button"
         className={css.tileButton}
-        style={{ aspectRatio }}
+        style={{ aspectRatio: aspectRatio ?? "4 / 3" }}
         aria-label={`Open ${name}`}
         onClick={() => onOpen(data)}
         onContextMenu={(event) => {
@@ -70,6 +77,11 @@ export const Media = ({ data, columnWidth, onOpen }: MediaProps) => {
         {kind === "video" && (
           <span className={css.videoBadge} aria-hidden="true">
             ▶
+          </span>
+        )}
+        {(kind === "model" || kind === "splat") && (
+          <span className={css.modelBadge} aria-hidden="true">
+            {kind === "model" ? "3D" : "SPLAT"}
           </span>
         )}
       </button>

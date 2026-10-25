@@ -26,10 +26,20 @@ export const videoExtensions = [
   "3g2",
 ];
 
+export const modelExtensions = ["glb", "gltf"];
+export const splatExtensions = ["splat", "ksplat", "spz", "ply", "sogs"];
+
 const toPattern = (extensions: string[]) => {
   return new RegExp(`\\.(${extensions.join("|")})$`, "i");
 };
 
 export const imageRegExp = toPattern(imageExtensions);
 export const videoRegExp = toPattern(videoExtensions);
-export const mediaRegExp = toPattern([...imageExtensions, ...videoExtensions]);
+export const modelRegExp = toPattern(modelExtensions);
+export const splatRegExp = toPattern(splatExtensions);
+export const mediaRegExp = toPattern([
+  ...imageExtensions,
+  ...videoExtensions,
+  ...modelExtensions,
+  ...splatExtensions,
+]);

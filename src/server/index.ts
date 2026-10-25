@@ -26,6 +26,7 @@ export const startServer = async (
   optionPort = 3000,
   optionHost = "127.0.0.1",
   auth?: Auth,
+  spatialDir?: string,
 ) => {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : optionPort;
 
@@ -39,6 +40,18 @@ export const startServer = async (
         next(new Error("unauthorized"));
       }
     });
+  }
+
+  if (spatialDir) {
+    app.get("/api/capabilities", (_req, res) => {
+      res.json({ spatial: true, assetsBase: "/spatial/" });
+    });
+    app.use(
+      "/spatial",
+      express.static(spatialDir, {
+        dotfiles: "deny",
+      }),
+    );
   }
 
   let bindVite: (() => void) | undefined;

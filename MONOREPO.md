@@ -35,8 +35,9 @@ spatial/VR support in a separate workspace package.
 
 ## Current scaffold status
 
-`@visorium/spatial` is intentionally **private**. It contains only a contract
-stub until the actual viewer is implemented. Do not publish it yet.
+`@visorium/spatial` is intentionally **private** while the spatial viewer is
+being developed. It now contains the initial lazy-loaded 3D viewer for images,
+videos, and GLB models; splat rendering and full XR controls are still pending.
 
 The root release workflow still publishes only `visorium`. The release-please
 manifest/linked-version configuration is staged in the repository, but the
@@ -54,6 +55,17 @@ pnpm --filter @visorium/spatial test:typecheck
 pnpm test:versions
 pnpm lint
 ```
+
+To run the spatial viewer against the local private package:
+
+```bash
+VISORIUM_SPATIAL_DIR="$PWD/packages/spatial" node lib/cli/index.js vr --port 3000
+```
+
+Open `http://127.0.0.1:3000/?view=vr`. The flat gallery also exposes an
+`Open 3D / VR` button when the spatial assets are available. The core gallery
+passes its existing file list and active item to the viewer; the viewer does
+not open a second socket.
 
 The core build and spatial build are separate:
 

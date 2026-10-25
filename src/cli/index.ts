@@ -7,6 +7,10 @@ const { version } = JSON.parse(
 ) as { version: string };
 
 const program = new Command();
+const vr = process.argv[2] === "vr";
+if (vr) {
+  process.argv.splice(2, 1);
+}
 
 const collect = (value: string, previous: string[]) => [...previous, value];
 
@@ -14,7 +18,7 @@ program
   .name("visorium")
   .description("Gallery server")
   .version(version)
-  .action(start)
+  .action((options) => start({ ...options, vr }))
   .option("-p, --port <number>", "Port to run the server on", "3000")
   .option(
     "--host <host>",

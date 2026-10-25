@@ -28,6 +28,7 @@ import { getMimeType } from "../../shared/mime.js";
 import { logger } from "../utils/logger.js";
 import { probeAspectRatio } from "../utils/media-prober.js";
 import { createScanFilter } from "../utils/scan-filter.js";
+import { resolveSpatialDist } from "../utils/spatial.js";
 
 interface InitOptions {
   port: string;
@@ -36,6 +37,7 @@ interface InitOptions {
   ext: string[];
   includeHidden: boolean;
   ignore: string[];
+  vr?: boolean;
 }
 
 let counter = 0;
@@ -105,10 +107,20 @@ export async function start(options: InitOptions) {
     cacheDir,
     key: process.cwd(),
   });
+  const spatialDist = resolveSpatialDist();
+  if (options.vr && !spatialDist) {
+    logger.error(
+      "Spatial/VR support is not installed. Install it and rerun:\n" +
+        "  npx -p visorium -p @visorium/spatial visorium vr",
+    );
+    process.exitCode = 1;
+    return;
+  }
   const { app, port, host, io } = await startServer(
     parseInt(options.port, 10),
     options.host,
     auth ?? undefined,
+    spatialDist ?? undefined,
   );
   const displayHost =
     host === "0.0.0.0" || host === "::" ? "localhost" : host;
@@ -375,7 +387,10 @@ export async function start(options: InitOptions) {
     })
     .on("ready", () => {
       ready = true;
-      logger.info(`Visorium is ready: http://${displayHost}:${port}`);
+      const viewerPath = options.vr ? "/?view=vr" : "/";
+      logger.info(
+        `Visorium is ready: http://${displayHost}:${port}${viewerPath}`,
+      );
       if (host === "0.0.0.0" || host === "::") {
         logger.info(
           "Listening on all interfaces. Access requires the token printed above.",

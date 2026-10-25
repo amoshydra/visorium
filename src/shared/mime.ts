@@ -38,6 +38,15 @@ const contentTypeMap = new Map([
   ["bmp", "image/bmp"],
   ["tiff", "image/tiff"],
   ["tif", "image/tiff"],
+
+  // 3D model and splat formats
+  ["glb", "model/gltf-binary"],
+  ["gltf", "model/gltf+json"],
+  ["splat", "application/octet-stream"],
+  ["ksplat", "application/octet-stream"],
+  ["spz", "application/octet-stream"],
+  ["ply", "application/octet-stream"],
+  ["sogs", "application/octet-stream"],
 ]);
 
 export const getMimeType = (path: string) => {
