@@ -2,8 +2,9 @@
 
 Optional spatial and VR viewer assets for Visorium.
 
-This package is currently **private** while the spatial viewer is being
-developed. It contains an initial lazy-loaded viewer for:
+This package is an initial **experimental** spatial viewer. It is published
+separately from the core gallery so flat users do not install the 3D runtime.
+It contains an initial lazy-loaded viewer for:
 
 - a 3D gallery wall with lazy image/video thumbnails and 3D/splat cards
 - a focus view for GLB/GLTF models
@@ -11,7 +12,8 @@ developed. It contains an initial lazy-loaded viewer for:
 - 360/180 captures detected by filename
 - an `Enter VR` control when WebXR is supported
 
-Splat rendering and richer XR controls are pending.
+Splat rendering and richer XR controls are pending. The viewer is shipped as an
+experimental add-on until it has been validated on physical headsets.
 
 The published package should contain only prebuilt browser assets in `dist/`.
 Three, R3F, Drei, XR, and Spark belong in `devDependencies`; they are bundled

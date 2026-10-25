@@ -25,6 +25,24 @@ npx visorium
 
 open [`http://localhost:3000`](http://localhost:3000) in your browser.
 
+### 3D / VR add-on
+
+The 3D gallery and VR viewer are an optional add-on, so normal image and video
+users do not install the 3D runtime:
+
+```bash
+npx -p visorium -p @visorium/spatial visorium
+```
+
+Use the `Open 3D / VR` button in the gallery, or start directly in spatial mode:
+
+```bash
+npx -p visorium -p @visorium/spatial visorium vr
+```
+
+WebXR requires a secure context. Use `https` or `http://localhost` when testing
+with a headset.
+
 ### Network access
 
 By default Visorium binds to `127.0.0.1`, so it is only reachable from the same

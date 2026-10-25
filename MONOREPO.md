@@ -35,14 +35,13 @@ spatial/VR support in a separate workspace package.
 
 ## Current scaffold status
 
-`@visorium/spatial` is intentionally **private** while the spatial viewer is
-being developed. It now contains the initial lazy-loaded 3D viewer for images,
-videos, and GLB models; splat rendering and full XR controls are still pending.
+`@visorium/spatial` is published as an experimental add-on. It contains the
+initial lazy-loaded 3D viewer for images, videos, and GLB models; splat
+rendering, richer XR controls, and headset validation are still pending.
 
-The root release workflow still publishes only `visorium`. The release-please
-manifest/linked-version configuration is staged in the repository, but the
-release workflow must not switch to manifest mode until the spatial package is
-functional and ready to publish.
+The release workflow uses release-please manifest mode and publishes both
+packages in lockstep. The spatial package is published first so core never
+points at a missing matching version.
 
 ## Development
 
@@ -88,30 +87,19 @@ pnpm build:spatial  # spatial only
 pnpm build:all      # both
 ```
 
-## Release activation
+## Release
 
-When the spatial viewer is ready:
+The release workflow uses `release-please-config.json` and
+`.release-please-manifest.json`. It creates one release PR for the linked
+`visorium` and `visorium-spatial` components and publishes both with npm
+trusted publishing.
 
-1. Remove `"private": true` from `packages/spatial/package.json`.
-2. Configure an npm trusted publisher for `@visorium/spatial` using the same
-   `npm.yml` workflow.
-3. Switch `npm.yml` from simple release mode to manifest mode:
+The release job publishes the spatial package first, then the core package:
 
-   ```yaml
-   with:
-     config-file: release-please-config.json
-     manifest-file: .release-please-manifest.json
-   ```
-
-4. Build both packages in the release job.
-5. Publish in dependency order:
-
-   ```bash
-   (cd packages/spatial && npm publish --access public)
-   npm publish --access public
-   ```
-
-6. Add a package install smoke test using the packed tarballs.
+```bash
+(cd packages/spatial && npm publish --access public)
+npm publish --access public
+```
 
 The first trusted publish for `@visorium/spatial` must happen within the
 publisher-validation window.

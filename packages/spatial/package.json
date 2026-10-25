@@ -1,7 +1,6 @@
 {
   "name": "@visorium/spatial",
   "version": "1.0.0",
-  "private": true,
   "description": "Optional spatial and VR viewer assets for Visorium",
   "license": "GPL-3.0",
   "type": "module",
