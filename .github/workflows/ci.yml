@@ -35,8 +35,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check workspace versions
+        run: pnpm test:versions
+
       - name: Typecheck tests
         run: pnpm test:typecheck
+
+      - name: Typecheck spatial package
+        run: pnpm --filter @visorium/spatial test:typecheck
 
       - name: Run tests
         run: pnpm test
@@ -44,8 +50,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Build
-        run: pnpm build
+      - name: Build core and spatial packages
+        run: pnpm build:all
 
-      - name: Validate package
+      - name: Validate core package
         run: pnpm run lint:package
+
+      - name: Validate spatial package
+        run: pnpm --filter @visorium/spatial lint:package

@@ -7,6 +7,9 @@
     "type": "git",
     "url": "git+https://github.com/amoshydra/visorium.git"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
     "visorium": "./bin/cli.js"
   },
@@ -19,9 +22,12 @@
   "scripts": {
     "dev": "tsx src/cli/index.ts",
     "build": "NODE_ENV=production tsc -b && vite build",
+    "build:spatial": "pnpm --filter @visorium/spatial build",
+    "build:all": "pnpm build && pnpm build:spatial",
     "lint": "eslint .",
     "test": "node --import tsx --test test/*.test.ts",
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test:versions": "node scripts/check-workspace-versions.mjs",
     "benchmark": "tsx scripts/benchmark.ts",
     "preview": "vite preview",
     "start": "NODE_ENV=production node lib/cli/index.js",
