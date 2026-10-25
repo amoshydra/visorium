@@ -24,7 +24,8 @@
     "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
     "benchmark": "tsx scripts/benchmark.ts",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node lib/cli/index.js"
+    "start": "NODE_ENV=production node lib/cli/index.js",
+    "lint:package": "publint"
   },
   "dependencies": {
     "chalk": "^5.4.1",
@@ -51,6 +52,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "publint": "^0.3.25",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "ts-node": "^10.9.2",
