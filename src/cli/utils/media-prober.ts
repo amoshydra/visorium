@@ -35,8 +35,7 @@ const probeImageAspectRadio = async (
   path: string,
 ): Promise<AspectRatio | undefined> => {
   const metadata = await sharp(path).metadata();
-  if (metadata.width == undefined || metadata.height == undefined)
-    return undefined;
+  if (!metadata.width || !metadata.height) return undefined;
 
   return getAspectRatio(metadata.width, metadata.height);
 };

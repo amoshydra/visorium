@@ -1,5 +1,4 @@
 import express, { type Express } from "express";
-import ViteExpress from "vite-express";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { join, dirname } from "node:path";
@@ -23,7 +22,7 @@ export interface StartServerReturn {
   io: Server;
 }
 // Start the server
-export const startServer = (
+export const startServer = async (
   optionPort = 3000,
   optionHost = "127.0.0.1",
   auth?: Auth,
@@ -42,27 +41,24 @@ export const startServer = (
     });
   }
 
+  let bindVite: (() => void) | undefined;
+
   if (process.env.NODE_ENV === "development") {
+    const { default: ViteExpress } = await import("vite-express");
     ViteExpress.config({
       viteConfigFile: join(__dirname, "../../vite.config.ts"),
     });
+    bindVite = () => ViteExpress.bind(app, httpServer);
   } else {
-    ViteExpress.config({
-      mode: "production",
-      inlineViteConfig: {
-        root: join(__dirname, "../.."),
-        base: process.env.BASE_URL,
-      },
-    });
-    // Serve static files from the dist directory
-    // somehow vite-express does not serve files from the dist directory
+    // The production package intentionally does not install Vite. This static
+    // server is the entire production frontend path.
     app.use("/", express.static(join(__dirname, "../../dist")));
   }
 
   return new Promise<StartServerReturn>((resolve) => {
-    const server = httpServer.listen(port, optionHost, () => {
+    httpServer.listen(port, optionHost, () => {
+      bindVite?.();
       resolve({ app, port, host: optionHost, io });
     });
-    ViteExpress.bind(app, server);
   });
 };

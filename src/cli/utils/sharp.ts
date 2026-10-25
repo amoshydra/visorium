@@ -4,8 +4,7 @@ const getSharp = async () => {
   try {
     const { default: sharp } = await import("sharp");
     return sharp;
-  } catch (e) {
-    console.log(e);
+  } catch {
     return () => ({
       metadata: (): Promise<Metadata> =>
         Promise.resolve({

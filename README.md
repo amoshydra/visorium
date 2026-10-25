@@ -88,8 +88,11 @@ Thumbnails and video posters are cached in the platform cache directory
 `VISORIUM_CACHE_DIR`. The cache is pruned at startup to 2 GiB by default; set
 `VISORIUM_CACHE_MAX_BYTES` to change the limit.
 
-Video posters require `ffmpeg` on `PATH` (or `FFMPEG_PATH`). Without it, videos
-still play, but the grid falls back to video metadata.
+Video aspect ratios require `ffprobe` on `PATH` (or `FFPROBE_PATH`), and video
+posters require `ffmpeg` on `PATH` (or `FFMPEG_PATH`). Without them, videos
+still play, but the grid falls back to default sizing and video metadata.
+Visorium intentionally does not bundle the large platform-specific ffprobe
+binary.
 
 ### Gallery URL parameters
 
