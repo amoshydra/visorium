@@ -14,13 +14,17 @@ It contains an initial lazy-loaded viewer for:
 - an `Enter VR` control when WebXR is supported
 
 The flat lightbox exposes Orbit and Walk navigation. Orbit supports pinch/wheel
-zoom, two-finger/right-drag screen-space pan, and a reset control (button,
-double-click, or `R`). Switching back to Orbit preserves the current Walk view
-and orbits around a point in front of the camera. Walk supports drag look,
-`W/A/S/D` movement, `Q/E` height, scroll movement, and touch joystick/height
-controls for architecture captures. Walk speed and look sensitivity are
-adjustable from the gear button and are remembered across files. Mode
-transitions briefly show the navigation plane and the orbit point.
+zoom, two-finger/right/middle-drag screen-space pan, Shift+scroll pan,
+double-click or double-tap focus on a point, `F` to frame the model, and a
+reset control (button or `R`). Switching back to Orbit preserves the current
+Walk view and orbits around a point in front of the camera. Walk supports drag
+look, `W/A/S/D` movement, `Q/E` height, and a left touch joystick with a
+right-side height rail for architecture captures. The mouse wheel adjusts walk
+speed and shows a speed readout; Shift sprints. Viewer settings cover movement
+speed, look sensitivity, zoom-to-cursor, height locking, and optional
+tap-to-walk; settings are remembered across files. Walk is free-fly and has no
+collision detection. Mode transitions briefly show the navigation plane and
+the orbit point.
 
 View orientation can be rotated in 90° steps; orientation and navigation mode
 are remembered per file in browser storage. The Z-up preset applies the common
