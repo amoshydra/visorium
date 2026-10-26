@@ -16,14 +16,22 @@ import {
 import { getMediaKind } from "../lib/media-kind";
 import { toThumbnailUrl } from "../lib/urls";
 import { MediaError } from "./MediaError";
+import { SpatialLightboxViewer } from "./SpatialLightboxViewer";
 import css from "./GalleryLightbox.module.css";
 
 export interface GalleryLightboxProps {
   files: MediaInfo[];
   file: MediaInfo | null;
+  spatialBase?: string | null;
   onNavigate: (file: MediaInfo) => void;
   onClose: () => void;
 }
+
+const isSpatialFile = (file: MediaInfo | null) => {
+  if (!file) return false;
+  const kind = getMediaKind(file.name);
+  return kind === "model" || kind === "splat";
+};
 
 const PREVIEW_WIDTH = 1600;
 const MOBILE_PREVIEW_WIDTH = 1280;
@@ -31,6 +39,7 @@ const MOBILE_PREVIEW_WIDTH = 1280;
 export const GalleryLightbox = ({
   files,
   file,
+  spatialBase,
   onNavigate,
   onClose,
 }: GalleryLightboxProps) => {
@@ -118,6 +127,10 @@ export const GalleryLightbox = ({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isSpatialFile(file)) {
+        return;
+      }
+
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         navigate(-1);
@@ -129,7 +142,7 @@ export const GalleryLightbox = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, navigate]);
+  }, [file, isOpen, navigate]);
 
   useEffect(() => {
     if (!isOpen || index < 0 || files.length < 2) {
@@ -194,6 +207,7 @@ export const GalleryLightbox = ({
             file={file}
             total={files.length}
             previewWidth={previewWidth}
+            spatialBase={spatialBase}
             onNavigate={navigate}
             onClose={close}
           />
@@ -207,6 +221,7 @@ interface LightboxContentProps {
   file: MediaInfo;
   total: number;
   previewWidth: number;
+  spatialBase?: string | null;
   onNavigate: (offset: number) => void;
   onClose: () => void;
 }
@@ -215,10 +230,12 @@ const LightboxContent = ({
   file,
   total,
   previewWidth,
+  spatialBase,
   onNavigate,
   onClose,
 }: LightboxContentProps) => {
   const kind = getMediaKind(file.name);
+  const isSpatial = isSpatialFile(file);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const previewSrc = file.thumbSrc
     ? toThumbnailUrl(
@@ -288,14 +305,29 @@ const LightboxContent = ({
   return (
     <div className={css.content}>
       <div
-        className={css.stage}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={() => {
-          touchStart.current = null;
-        }}
+        className={`${css.stage} ${isSpatial ? css.spatialStage : ""}`}
+        onTouchStart={isSpatial ? undefined : handleTouchStart}
+        onTouchEnd={isSpatial ? undefined : handleTouchEnd}
+        onTouchCancel={
+          isSpatial
+            ? undefined
+            : () => {
+                touchStart.current = null;
+              }
+        }
       >
-        {kind === "image" && !imageFailed && (
+        {isSpatial && spatialBase && (
+          <SpatialLightboxViewer file={file} assetsBase={spatialBase} />
+        )}
+
+        {isSpatial && !spatialBase && (
+          <div className={css.spatialMissing}>
+            <p>3D support is not installed.</p>
+            <code>npx -p visorium -p @visorium/spatial visorium</code>
+          </div>
+        )}
+
+        {!isSpatial && kind === "image" && !imageFailed && (
           <div className={css.imageStage}>
             {file.thumbSrc && (
               <img
@@ -320,13 +352,13 @@ const LightboxContent = ({
           </div>
         )}
 
-        {(kind === "error" || imageFailed) && (
+        {!isSpatial && (kind === "error" || imageFailed) && (
           <div className={css.error}>
             <MediaError src={file.src} alt={file.name} />
           </div>
         )}
 
-        {kind === "video" && (
+        {!isSpatial && kind === "video" && (
           <video
             className={css.video}
             src={file.src}

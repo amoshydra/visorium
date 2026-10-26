@@ -109,6 +109,35 @@
     touch-action: pan-y pinch-zoom;
 }
 
+.spatialStage {
+    padding: 0;
+    overflow: hidden;
+    touch-action: none;
+}
+
+.spatialMissing {
+    display: grid;
+    gap: 0.75rem;
+    max-width: 34rem;
+    padding: 1.25rem;
+    color: #ddd;
+    text-align: center;
+}
+
+.spatialMissing p {
+    margin: 0;
+}
+
+.spatialMissing code {
+    overflow-wrap: anywhere;
+    padding: 0.75rem;
+    border: 1px solid #333;
+    border-radius: 0.4rem;
+    background: #151515;
+    color: #9cc4ff;
+    font-size: 0.75rem;
+}
+
 .imageStage {
     position: relative;
     display: flex;

@@ -40,8 +40,10 @@ Use the `Open 3D / VR` button in the gallery, or start directly in spatial mode:
 npx -p visorium -p @visorium/spatial visorium vr
 ```
 
-WebXR requires a secure context. Use `https` or `http://localhost` when testing
-with a headset.
+GLB models and splats can also be opened directly from the flat gallery. They
+render in the normal lightbox with touch orbit, zoom, and pan controls. WebXR
+requires a secure context; use `https` or `http://localhost` when testing with a
+headset.
 
 ### Network access
 
