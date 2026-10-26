@@ -43,12 +43,15 @@ npx -p visorium -p @visorium/spatial visorium vr
 GLB models and splats can also be opened directly from the flat gallery. They
 render in the normal lightbox with touch orbit, zoom, and pan controls. Switch
 to Walk for architecture-style captures and true depth movement (`W/A/S/D`,
-`Q/E` height, scroll, or the touch joystick). Rotate orientation in 90° steps
-when a capture is lying on its side. Use the Reset button, double-click, or `R`
-to reframe the view. Large splats show their loading progress and failures
-offer a retry. Orientation and navigation preferences are remembered per file
-in the browser. WebXR requires a secure context; use `https` or
-`http://localhost` when testing with a headset.
+`Q/E` height, scroll, or the touch joystick). The Walk settings button adjusts
+movement speed and look sensitivity. Orbit picks up the current Walk view and
+orbits around the point in front of the camera. Rotate orientation in 90° steps
+when a capture is lying on its side; the Z-up preset applies the common
+`X 270°` fix. Use the Reset button, double-click, or `R` to reframe the view.
+Large splats show their loading progress and failures offer a retry.
+Orientation and navigation preferences are remembered per file in the browser,
+while Walk speed and sensitivity are remembered across files. WebXR requires a
+secure context; use `https` or `http://localhost` when testing with a headset.
 
 ### Network access
 
