@@ -16,6 +16,11 @@ import {
 import {
   Box3,
   DoubleSide,
+  MathUtils,
+  MOUSE,
+  Raycaster,
+  Sphere,
+  Vector2,
   Vector3,
   type Group,
   type Material,
@@ -29,22 +34,36 @@ import {
   type MoveInput,
   type NavigationMode,
 } from "./NavigationControls.js";
+import {
+  DEFAULT_VIEWER_SETTINGS,
+  LOOK_RANGE,
+  SPEED_RANGE,
+  isEditableTarget,
+  type ViewerSettings,
+} from "./settings.js";
 
 const SplatScene = lazy(() => import("./SplatScene.js"));
 
 const HINT_HIDE_DELAY = 7_000;
+const SPEED_NOTICE_DURATION = 1_400;
 const ORIENTATION_STEP = 90;
 const DEG_TO_RAD = Math.PI / 180;
+const FOCUS_DURATION = 220;
+const FOCUS_OBJECT_NAME = "spatial-content";
 const STORAGE_PREFIX = "visorium:spatial-view:";
 const SETTINGS_STORAGE_KEY = "visorium:spatial-settings:v1";
 const DEFAULT_Z_UP_STORAGE_KEY = "visorium:spatial-default-zup:v1";
 const GUIDE_FADE_IN = 0.15;
 const GUIDE_HOLD = 0.45;
 const GUIDE_FADE_OUT = 1.3;
-const DEFAULT_WALK_SETTINGS = {
-  speed: 0.8,
-  lookSensitivity: 0.6,
+const ORBIT_MOUSE_BUTTONS = {
+  LEFT: MOUSE.ROTATE,
+  MIDDLE: MOUSE.PAN,
+  RIGHT: MOUSE.PAN,
 };
+const TEMP_X_AXIS = new Vector3();
+const TEMP_Y_AXIS = new Vector3();
+const TEMP_PAN = new Vector3();
 
 export interface LightboxMedia {
   name: string;
@@ -77,14 +96,7 @@ interface StoredView {
   orientation: Orientation | null;
 }
 
-interface WalkSettings {
-  speed: number;
-  lookSensitivity: number;
-}
-
 const ZERO_ORIENTATION: Orientation = { x: 0, y: 0, z: 0 };
-const SPEED_RANGE = { min: 0.1, max: 2.5, step: 0.1 };
-const LOOK_RANGE = { min: 0.1, max: 1.5, step: 0.05 };
 
 const modelPattern = /\.(glb|gltf)$/i;
 const splatPattern = /\.(splat|ksplat|spz|ply|sogs)$/i;
@@ -164,10 +176,13 @@ const clampSetting = (value: unknown, min: number, max: number) =>
     ? Math.min(max, Math.max(min, value))
     : null;
 
-const readWalkSettings = (): WalkSettings => {
+const readBoolean = (value: unknown, fallback: boolean) =>
+  typeof value === "boolean" ? value : fallback;
+
+const readViewerSettings = (): ViewerSettings => {
   try {
     const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_WALK_SETTINGS };
+    if (!raw) return { ...DEFAULT_VIEWER_SETTINGS };
 
     const value = JSON.parse(raw) as Record<string, unknown>;
     return {
@@ -176,20 +191,32 @@ const readWalkSettings = (): WalkSettings => {
           value.speed,
           SPEED_RANGE.min,
           SPEED_RANGE.max,
-        ) ?? DEFAULT_WALK_SETTINGS.speed,
+        ) ?? DEFAULT_VIEWER_SETTINGS.speed,
       lookSensitivity:
         clampSetting(
           value.lookSensitivity,
           LOOK_RANGE.min,
           LOOK_RANGE.max,
-        ) ?? DEFAULT_WALK_SETTINGS.lookSensitivity,
+        ) ?? DEFAULT_VIEWER_SETTINGS.lookSensitivity,
+      zoomToCursor: readBoolean(
+        value.zoomToCursor,
+        DEFAULT_VIEWER_SETTINGS.zoomToCursor,
+      ),
+      stayGrounded: readBoolean(
+        value.stayGrounded,
+        DEFAULT_VIEWER_SETTINGS.stayGrounded,
+      ),
+      tapToWalk: readBoolean(
+        value.tapToWalk,
+        DEFAULT_VIEWER_SETTINGS.tapToWalk,
+      ),
     };
   } catch {
-    return { ...DEFAULT_WALK_SETTINGS };
+    return { ...DEFAULT_VIEWER_SETTINGS };
   }
 };
 
-const writeWalkSettings = (settings: WalkSettings) => {
+const writeViewerSettings = (settings: ViewerSettings) => {
   try {
     window.localStorage.setItem(
       SETTINGS_STORAGE_KEY,
@@ -232,6 +259,34 @@ const controlButtonStyle = (active = false) => ({
   backdropFilter: "blur(6px)",
 });
 
+const settingsLabelStyle = {
+  display: "grid",
+  gap: 6,
+  marginBottom: 12,
+  color: "#ddd",
+  fontSize: 12,
+} as const;
+
+const settingsValueStyle = { color: "#9cc4ff" } as const;
+
+const settingsNoteStyle = {
+  margin: "0 0 12px",
+  color: "#8f8f8f",
+  fontSize: 11,
+  lineHeight: 1.4,
+} as const;
+
+const settingsCheckboxStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 4,
+  color: "#ddd",
+  fontSize: 12,
+  lineHeight: 1.35,
+  cursor: "pointer",
+} as const;
+
 export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const kind = getKind(media.name);
   const storageKey = useMemo(
@@ -257,10 +312,17 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   );
   const [orientationOpen, setOrientationOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [walkSettings, setWalkSettings] =
-    useState<WalkSettings>(readWalkSettings);
+  const [settings, setSettings] =
+    useState<ViewerSettings>(readViewerSettings);
+  const [focusToken, setFocusToken] = useState(0);
+  const [walkTarget, setWalkTarget] = useState<Vector3 | null>(null);
+  const [speedNotice, setSpeedNotice] = useState<{
+    speed: number;
+    key: number;
+  } | null>(null);
   const [guideTarget, setGuideTarget] = useState<Vector3 | null>(null);
   const previousMode = useRef<NavigationMode | null>(null);
+  const speedNoticeKey = useRef(0);
   const orbitTargetRef = useRef(new Vector3(0, 1.1, 0));
   const moveRef = useRef<MoveInput>({
     forward: 0,
@@ -270,6 +332,27 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
 
   const clearStatus = useCallback(() => setStatus(null), []);
   const clearGuide = useCallback(() => setGuideTarget(null), []);
+  const resetView = useCallback(() => {
+    setResetToken((token) => token + 1);
+    setWalkTarget(null);
+    setHintVisible(false);
+  }, []);
+  const focusView = useCallback(() => {
+    setFocusToken((token) => token + 1);
+    setHintVisible(false);
+  }, []);
+  const handleSpeedChange = useCallback((nextSpeed: number) => {
+    setSettings((current) =>
+      current.speed === nextSpeed
+        ? current
+        : { ...current, speed: nextSpeed },
+    );
+    setSpeedNotice({
+      speed: nextSpeed,
+      key: ++speedNoticeKey.current,
+    });
+    setHintVisible(false);
+  }, []);
   const handleError = useCallback(
     (message: string) => {
       setStatus(null);
@@ -298,8 +381,17 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   }, [mode, orientation, storageKey]);
 
   useEffect(() => {
-    writeWalkSettings(walkSettings);
-  }, [walkSettings]);
+    writeViewerSettings(settings);
+  }, [settings]);
+
+  useEffect(() => {
+    if (!speedNotice) return;
+    const timeout = window.setTimeout(
+      () => setSpeedNotice(null),
+      SPEED_NOTICE_DURATION,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [speedNotice]);
 
   useEffect(() => {
     writeDefaultZUp(zUpDefault);
@@ -341,21 +433,29 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         event.defaultPrevented ||
         event.metaKey ||
         event.ctrlKey ||
-        event.altKey
+        event.altKey ||
+        event.repeat ||
+        isEditableTarget(event.target)
       ) {
         return;
       }
 
-      if (event.key.toLowerCase() === "r") {
+      const key = event.key.toLowerCase();
+      if (key === "r") {
         event.preventDefault();
-        setResetToken((token) => token + 1);
-        setHintVisible(false);
+        resetView();
+        return;
+      }
+
+      if (key === "f" && mode === "orbit") {
+        event.preventDefault();
+        focusView();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [focusView, mode, resetView]);
 
   if (kind === "unsupported") {
     return null;
@@ -364,20 +464,28 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const hintText =
     mode === "walk"
       ? coarsePointer
-        ? "Drag to look · joystick to move · ↑/↓ for height"
-        : "Drag to look · W/A/S/D move · Q/E height · scroll forward/back"
+        ? `Left joystick moves · drag to look${
+            settings.stayGrounded ? "" : " · ↑/↓ height"
+          }${settings.tapToWalk ? " · tap ground to move" : ""}`
+        : `Drag to look · W/A/S/D move${
+            settings.stayGrounded ? "" : " · Q/E height"
+          }${settings.tapToWalk ? " · click ground to walk" : ""} · scroll speed · Shift sprint`
       : coarsePointer
-        ? "One finger orbit · pinch to zoom · two fingers to pan"
-        : "Drag to orbit · scroll or pinch to zoom · right-drag to pan";
+        ? "One finger orbit · pinch to zoom · two-finger pan · double-tap to focus"
+        : "Drag to orbit · scroll to zoom · right-drag or Shift+scroll to pan · double-click to focus";
 
-  const hintMaxWidth =
+  const hintMaxWidth = "min(32rem, calc(100% - 24px))";
+  const hintBottom =
     mode === "walk" && coarsePointer
-      ? "calc(100% - 210px)"
-      : "min(26rem, calc(100% - 24px))";
+      ? "calc(118px + env(safe-area-inset-bottom))"
+      : "max(12px, env(safe-area-inset-bottom))";
+  const panelTop = coarsePointer ? 118 : 64;
+  const panelMaxHeight = `calc(100% - ${panelTop + 12}px)`;
 
   const changeMode = (next: NavigationMode) => {
     if (next === mode) return;
     moveRef.current = { forward: 0, strafe: 0, vertical: 0 };
+    setWalkTarget(null);
     setMode(next);
     setSettingsOpen(false);
     setHintVisible(true);
@@ -415,11 +523,6 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
       onPointerDown={(event) => {
         if (event.target instanceof HTMLCanvasElement) {
           setHintVisible(false);
-        }
-      }}
-      onDoubleClick={(event) => {
-        if (event.target instanceof HTMLCanvasElement) {
-          setResetToken((token) => token + 1);
         }
       }}
     >
@@ -466,13 +569,19 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           mode={mode}
           resetToken={resetToken}
           targetRef={orbitTargetRef}
+          focusToken={focusToken}
+          zoomToCursor={settings.zoomToCursor}
         />
         <WalkControls
           active={mode === "walk"}
           moveRef={moveRef}
           resetToken={resetToken}
-          speed={walkSettings.speed}
-          lookSensitivity={walkSettings.lookSensitivity}
+          speed={settings.speed}
+          lookSensitivity={settings.lookSensitivity}
+          stayGrounded={settings.stayGrounded}
+          tapToWalk={settings.tapToWalk}
+          onSpeedChange={handleSpeedChange}
+          onWalkTarget={setWalkTarget}
         />
         <SceneErrorBoundary onError={handleError}>
           <Suspense fallback={null}>
@@ -492,6 +601,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             )}
           </Suspense>
         </SceneErrorBoundary>
+        <WalkTargetMarker target={walkTarget} />
         <TransitionGuide target={guideTarget} onComplete={clearGuide} />
       </Canvas>
 
@@ -527,6 +637,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           alignItems: "center",
           gap: 6,
           flexWrap: "wrap",
+          maxWidth: "calc(100% - 100px)",
         }}
       >
         <div role="group" aria-label="Navigation mode" style={{ display: "flex" }}>
@@ -569,27 +680,37 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         >
           Rotate
         </button>
-        {mode === "walk" && (
+        {mode === "orbit" && (
           <button
             type="button"
-            aria-label="Walk settings"
-            title="Walk settings"
-            aria-expanded={settingsOpen}
-            aria-controls="spatial-walk-settings-panel"
-            onClick={() => {
-              setOrientationOpen(false);
-              setSettingsOpen((open) => !open);
-            }}
-            style={{
-              ...controlButtonStyle(settingsOpen),
-              width: 44,
-              padding: 0,
-              fontSize: 15,
-            }}
+            aria-label="Focus 3D view"
+            aria-keyshortcuts="F"
+            title="Focus view (F)"
+            onClick={focusView}
+            style={controlButtonStyle(false)}
           >
-            ⚙
+            Focus
           </button>
         )}
+        <button
+          type="button"
+          aria-label="Viewer settings"
+          title="Viewer settings"
+          aria-expanded={settingsOpen}
+          aria-controls="spatial-viewer-settings-panel"
+          onClick={() => {
+            setOrientationOpen(false);
+            setSettingsOpen((open) => !open);
+          }}
+          style={{
+            ...controlButtonStyle(settingsOpen),
+            width: 44,
+            padding: 0,
+            fontSize: 15,
+          }}
+        >
+          ⚙
+        </button>
       </div>
 
       {orientationOpen && (
@@ -599,11 +720,11 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           aria-label="Orientation controls"
           style={{
             position: "absolute",
-            top: 64,
+            top: panelTop,
             left: 12,
             zIndex: 4,
             width: 258,
-            maxHeight: "calc(100% - 76px)",
+            maxHeight: panelMaxHeight,
             overflowY: "auto",
             padding: 10,
             border: "1px solid rgba(255, 255, 255, 0.18)",
@@ -699,6 +820,8 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
               }}
             >
               <input
+                id="spatial-default-z-up"
+                name="defaultZUp"
                 type="checkbox"
                 checked={zUpDefault}
                 onChange={(event) => setZUpDefault(event.target.checked)}
@@ -720,18 +843,18 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         </div>
       )}
 
-      {settingsOpen && mode === "walk" && (
+      {settingsOpen && (
         <div
-          id="spatial-walk-settings-panel"
+          id="spatial-viewer-settings-panel"
           role="group"
-          aria-label="Walk settings"
+          aria-label="Viewer settings"
           style={{
             position: "absolute",
-            top: 64,
+            top: panelTop,
             left: 12,
             zIndex: 4,
             width: 258,
-            maxHeight: "calc(100% - 76px)",
+            maxHeight: panelMaxHeight,
             overflowY: "auto",
             padding: 12,
             border: "1px solid rgba(255, 255, 255, 0.18)",
@@ -750,83 +873,142 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
               textTransform: "uppercase",
             }}
           >
-            Walk controls
+            {mode === "orbit" ? "Orbit controls" : "Walk controls"}
           </div>
-          <label
-            style={{
-              display: "grid",
-              gap: 6,
-              marginBottom: 12,
-              color: "#ddd",
-              fontSize: 12,
-            }}
-          >
-            <span
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 8,
-              }}
-            >
-              <span>Move speed</span>
-              <span style={{ color: "#9cc4ff" }}>
-                {walkSettings.speed.toFixed(1)}
-              </span>
-            </span>
-            <input
-              type="range"
-              min={SPEED_RANGE.min}
-              max={SPEED_RANGE.max}
-              step={SPEED_RANGE.step}
-              value={walkSettings.speed}
-              onChange={(event) =>
-                setWalkSettings((current) => ({
-                  ...current,
-                  speed: Number(event.target.value),
-                }))
-              }
-              style={{ width: "100%", accentColor: "#6ea8fe" }}
-            />
-          </label>
-          <label
-            style={{
-              display: "grid",
-              gap: 6,
-              marginBottom: 12,
-              color: "#ddd",
-              fontSize: 12,
-            }}
-          >
-            <span
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 8,
-              }}
-            >
-              <span>Look sensitivity</span>
-              <span style={{ color: "#9cc4ff" }}>
-                {walkSettings.lookSensitivity.toFixed(2)}×
-              </span>
-            </span>
-            <input
-              type="range"
-              min={LOOK_RANGE.min}
-              max={LOOK_RANGE.max}
-              step={LOOK_RANGE.step}
-              value={walkSettings.lookSensitivity}
-              onChange={(event) =>
-                setWalkSettings((current) => ({
-                  ...current,
-                  lookSensitivity: Number(event.target.value),
-                }))
-              }
-              style={{ width: "100%", accentColor: "#6ea8fe" }}
-            />
-          </label>
+
+          {mode === "orbit" ? (
+            <>
+              <label style={settingsCheckboxStyle}>
+                <input
+                  id="spatial-zoom-to-cursor"
+                  name="zoomToCursor"
+                  type="checkbox"
+                  checked={settings.zoomToCursor}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      zoomToCursor: event.target.checked,
+                    }))
+                  }
+                  style={{ accentColor: "#6ea8fe" }}
+                />
+                Zoom toward cursor
+              </label>
+              <p style={settingsNoteStyle}>
+                Wheel zoom follows the pointer. Shift+scroll or middle-drag
+                pans.
+              </p>
+            </>
+          ) : (
+            <>
+              <label style={settingsLabelStyle}>
+                <span
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <span>Move speed</span>
+                  <span style={settingsValueStyle}>
+                    {settings.speed.toFixed(1)}×
+                  </span>
+                </span>
+                <input
+                  id="spatial-walk-speed"
+                  name="walkSpeed"
+                  type="range"
+                  min={SPEED_RANGE.min}
+                  max={SPEED_RANGE.max}
+                  step={SPEED_RANGE.step}
+                  value={settings.speed}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      speed: Number(event.target.value),
+                    }))
+                  }
+                  style={{ width: "100%", accentColor: "#6ea8fe" }}
+                />
+              </label>
+              <label style={settingsLabelStyle}>
+                <span
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <span>Look sensitivity</span>
+                  <span style={settingsValueStyle}>
+                    {settings.lookSensitivity.toFixed(2)}×
+                  </span>
+                </span>
+                <input
+                  id="spatial-look-sensitivity"
+                  name="lookSensitivity"
+                  type="range"
+                  min={LOOK_RANGE.min}
+                  max={LOOK_RANGE.max}
+                  step={LOOK_RANGE.step}
+                  value={settings.lookSensitivity}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      lookSensitivity: Number(event.target.value),
+                    }))
+                  }
+                  style={{ width: "100%", accentColor: "#6ea8fe" }}
+                />
+              </label>
+              <label style={settingsCheckboxStyle}>
+                <input
+                  id="spatial-lock-eye-height"
+                  name="stayGrounded"
+                  type="checkbox"
+                  checked={settings.stayGrounded}
+                  onChange={(event) => {
+                    setSettings((current) => ({
+                      ...current,
+                      stayGrounded: event.target.checked,
+                    }));
+                    setWalkTarget(null);
+                  }}
+                  style={{ accentColor: "#6ea8fe" }}
+                />
+                Lock eye height
+              </label>
+              <p style={settingsNoteStyle}>
+                Stops vertical movement and keeps tap-to-walk level.
+              </p>
+              <label style={settingsCheckboxStyle}>
+                <input
+                  id="spatial-tap-to-walk"
+                  name="tapToWalk"
+                  type="checkbox"
+                  checked={settings.tapToWalk}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      tapToWalk: event.target.checked,
+                    }))
+                  }
+                  style={{ accentColor: "#6ea8fe" }}
+                />
+                Tap or click ground to walk
+              </label>
+              <p style={settingsNoteStyle}>
+                Walk is free-fly; there is no collision detection.
+              </p>
+            </>
+          )}
+
           <button
             type="button"
-            onClick={() => setWalkSettings({ ...DEFAULT_WALK_SETTINGS })}
+            onClick={() => {
+              setSettings({ ...DEFAULT_VIEWER_SETTINGS });
+              setWalkTarget(null);
+            }}
             style={{
               ...controlButtonStyle(false),
               width: "100%",
@@ -842,7 +1024,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         aria-label="Reset 3D view"
         aria-keyshortcuts="R"
         title="Reset view (R)"
-        onClick={() => setResetToken((token) => token + 1)}
+        onClick={resetView}
         style={{
           ...controlButtonStyle(false),
           position: "absolute",
@@ -854,11 +1036,35 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         Reset
       </button>
 
-      {mode === "walk" && coarsePointer && (
-        <>
-          <WalkJoystick moveRef={moveRef} />
-          <WalkHeightControls moveRef={moveRef} />
-        </>
+      {mode === "walk" && coarsePointer && <WalkJoystick moveRef={moveRef} />}
+      {mode === "walk" && coarsePointer && !settings.stayGrounded && (
+        <WalkHeightControls moveRef={moveRef} />
+      )}
+
+      {speedNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: "max(12px, env(safe-area-inset-bottom))",
+            zIndex: 3,
+            transform: "translateX(-50%)",
+            padding: "6px 10px",
+            border: "1px solid rgba(255, 255, 255, 0.18)",
+            borderRadius: 999,
+            background: "rgba(17, 17, 17, 0.82)",
+            color: "#dcecff",
+            fontFamily: "system-ui, sans-serif",
+            fontSize: 12,
+            fontVariantNumeric: "tabular-nums",
+            pointerEvents: "none",
+          }}
+        >
+          Speed {speedNotice.speed.toFixed(1)}×
+        </div>
       )}
 
       {hintVisible ? (
@@ -867,7 +1073,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           style={{
             position: "absolute",
             left: 12,
-            bottom: "max(12px, env(safe-area-inset-bottom))",
+            bottom: hintBottom,
             zIndex: 2,
             maxWidth: hintMaxWidth,
             padding: "7px 10px",
@@ -892,7 +1098,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             ...controlButtonStyle(false),
             position: "absolute",
             left: 12,
-            bottom: "max(12px, env(safe-area-inset-bottom))",
+            bottom: hintBottom,
             zIndex: 2,
             width: 44,
             height: 44,
@@ -924,19 +1130,167 @@ function orientationButtonStyle() {
   };
 }
 
+interface FocusAnimation {
+  fromTarget: Vector3;
+  toTarget: Vector3;
+  fromPosition: Vector3;
+  toPosition: Vector3;
+  start: number;
+}
+
 function CameraRig({
   kind,
   mode,
   resetToken,
   targetRef,
+  focusToken,
+  zoomToCursor,
 }: {
   kind: RenderableKind;
   mode: NavigationMode;
   resetToken: number;
   targetRef: { current: Vector3 };
+  focusToken: number;
+  zoomToCursor: boolean;
 }) {
-  const { camera } = useThree();
+  const { camera, gl, scene } = useThree();
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
+  const focusAnimation = useRef<FocusAnimation | null>(null);
+  const focusTarget = useRef(new Vector3());
+  const handledFocusToken = useRef(0);
+
+  const getContentBox = useCallback(() => {
+    const content = scene.getObjectByName(FOCUS_OBJECT_NAME);
+    if (!content) return null;
+
+    const box = new Box3().setFromObject(content);
+    return box.isEmpty() ? null : box;
+  }, [scene]);
+
+  const cancelFocus = useCallback(() => {
+    if (!focusAnimation.current) return;
+
+    focusAnimation.current = null;
+    const controls = controlsRef.current;
+    if (controls) {
+      controls.enabled = mode === "orbit";
+    }
+  }, [mode]);
+
+  const animateFocus = useCallback(
+    (toTarget: Vector3, toPosition: Vector3) => {
+      const controls = controlsRef.current;
+      if (!controls) return;
+
+      if (
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        controls.target.copy(toTarget);
+        camera.position.copy(toPosition);
+        camera.lookAt(toTarget);
+        targetRef.current.copy(toTarget);
+        controls.enabled = mode === "orbit";
+        controls.update();
+        return;
+      }
+
+      focusAnimation.current = {
+        fromTarget: controls.target.clone(),
+        toTarget: toTarget.clone(),
+        fromPosition: camera.position.clone(),
+        toPosition: toPosition.clone(),
+        start: performance.now(),
+      };
+      if (mode === "orbit") {
+        controls.enabled = false;
+      }
+    },
+    [camera, mode, targetRef],
+  );
+
+  const focusAll = useCallback(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const box = getContentBox();
+    const center = box
+      ? box.getCenter(new Vector3())
+      : new Vector3(0, 1.1, 0);
+    const sphere = box
+      ? box.getBoundingSphere(new Sphere())
+      : new Sphere(center, 1.2);
+    const radius =
+      Number.isFinite(sphere.radius) && sphere.radius > 0
+        ? sphere.radius
+        : 1.2;
+    const fov = MathUtils.degToRad("fov" in camera ? camera.fov : 50);
+    const distance = MathUtils.clamp(
+      (radius / Math.sin(fov / 2)) * 1.1,
+      1.5,
+      9,
+    );
+    const direction = camera.position.clone().sub(controls.target);
+    if (direction.lengthSq() < 1e-6) {
+      direction.set(0, 0, 1);
+    }
+    direction.normalize();
+
+    animateFocus(
+      center,
+      center.clone().addScaledVector(direction, distance),
+    );
+  }, [animateFocus, camera, getContentBox]);
+
+  const focusAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const controls = controlsRef.current;
+      if (!controls) return;
+
+      const content = scene.getObjectByName(FOCUS_OBJECT_NAME);
+      const rect = gl.domElement.getBoundingClientRect();
+      if (!content || rect.width === 0 || rect.height === 0) {
+        focusAll();
+        return;
+      }
+
+      const pointer = new Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      const raycaster = new Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+      const intersections = raycaster.intersectObject(content, true);
+      const hit = intersections.find((intersection) =>
+        Number.isFinite(intersection.distance),
+      );
+
+      if (!hit) {
+        focusAll();
+        return;
+      }
+
+      const toTarget = hit.point.clone();
+      const distance = MathUtils.clamp(
+        camera.position.distanceTo(toTarget) * 0.8,
+        0.5,
+        4,
+      );
+      const direction = camera.position.clone().sub(controls.target);
+      if (direction.lengthSq() < 1e-6) {
+        direction.copy(camera.position).sub(toTarget);
+      }
+      if (direction.lengthSq() < 1e-6) {
+        direction.set(0, 0, 1);
+      }
+      direction.normalize();
+
+      animateFocus(
+        toTarget,
+        toTarget.clone().addScaledVector(direction, distance),
+      );
+    },
+    [animateFocus, camera, focusAll, gl, scene],
+  );
 
   useEffect(() => {
     const target =
@@ -955,6 +1309,14 @@ function CameraRig({
       controls.update();
     }
   }, [camera, kind, resetToken, targetRef]);
+
+  useEffect(() => {
+    focusAnimation.current = null;
+    const controls = controlsRef.current;
+    if (controls) {
+      controls.enabled = mode === "orbit";
+    }
+  }, [mode, resetToken]);
 
   useEffect(() => {
     if (mode !== "orbit") return;
@@ -980,6 +1342,209 @@ function CameraRig({
     controls.update();
   }, [camera, kind, mode, targetRef]);
 
+  useEffect(() => {
+    if (
+      focusToken === 0 ||
+      focusToken === handledFocusToken.current
+    ) {
+      return;
+    }
+
+    handledFocusToken.current = focusToken;
+    if (mode === "orbit") {
+      focusAll();
+    }
+  }, [focusAll, focusToken, mode]);
+
+  useEffect(() => {
+    if (mode !== "orbit") return;
+
+    const canvas = gl.domElement;
+    let lastFocusAt = 0;
+    let tapState: {
+      pointerId: number;
+      x: number;
+      y: number;
+      time: number;
+      moved: boolean;
+    } | null = null;
+    let lastTap: { x: number; y: number; time: number } | null = null;
+
+    const handleDoubleClick = (event: MouseEvent) => {
+      const now = performance.now();
+      if (now - lastFocusAt < 350) return;
+
+      lastFocusAt = now;
+      focusAt(event.clientX, event.clientY);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") return;
+      if (tapState) {
+        tapState.moved = true;
+        return;
+      }
+
+      tapState = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now(),
+        moved: false,
+      };
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const tap = tapState;
+      if (!tap || tap.pointerId !== event.pointerId) return;
+      if (
+        Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 12
+      ) {
+        tap.moved = true;
+      }
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const tap = tapState;
+      if (!tap || tap.pointerId !== event.pointerId) return;
+
+      tapState = null;
+      if (tap.moved) return;
+
+      const now = performance.now();
+      if (
+        lastTap &&
+        now - lastTap.time < 320 &&
+        Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) <
+          24
+      ) {
+        lastTap = null;
+        if (now - lastFocusAt >= 350) {
+          lastFocusAt = now;
+          focusAt(event.clientX, event.clientY);
+        }
+        return;
+      }
+
+      lastTap = {
+        x: event.clientX,
+        y: event.clientY,
+        time: now,
+      };
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      if (tapState?.pointerId === event.pointerId) {
+        tapState = null;
+      }
+    };
+
+    canvas.addEventListener("dblclick", handleDoubleClick);
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+
+    return () => {
+      canvas.removeEventListener("dblclick", handleDoubleClick);
+      canvas.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+    };
+  }, [focusAt, gl, mode]);
+
+  useEffect(() => {
+    if (mode !== "orbit") return;
+
+    const canvas = gl.domElement;
+    const handleWheel = (event: WheelEvent) => {
+      if (
+        !event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.target !== canvas
+      ) {
+        return;
+      }
+
+      const controls = controlsRef.current;
+      const rect = canvas.getBoundingClientRect();
+      if (!controls || rect.width === 0 || rect.height === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      cancelFocus();
+
+      const distance = camera.position.distanceTo(controls.target);
+      const scale =
+        (2 *
+          distance *
+          Math.tan(
+            MathUtils.degToRad(
+              ("fov" in camera ? camera.fov : 50) / 2,
+            ),
+          )) /
+        rect.height;
+      TEMP_X_AXIS.setFromMatrixColumn(camera.matrix, 0);
+      TEMP_Y_AXIS.setFromMatrixColumn(camera.matrix, 1);
+      TEMP_PAN.set(0, 0, 0)
+        .addScaledVector(TEMP_X_AXIS, -event.deltaX * scale)
+        .addScaledVector(TEMP_Y_AXIS, event.deltaY * scale);
+
+      controls.target.add(TEMP_PAN);
+      camera.position.add(TEMP_PAN);
+      targetRef.current.copy(controls.target);
+      controls.update();
+    };
+
+    window.addEventListener("wheel", handleWheel, {
+      capture: true,
+      passive: false,
+    });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel, true);
+    };
+  }, [camera, cancelFocus, gl, mode, targetRef]);
+
+  useFrame(() => {
+    const animation = focusAnimation.current;
+    if (!animation) return;
+
+    const progress = Math.min(
+      1,
+      (performance.now() - animation.start) / FOCUS_DURATION,
+    );
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    camera.position.lerpVectors(
+      animation.fromPosition,
+      animation.toPosition,
+      eased,
+    );
+    focusTarget.current.lerpVectors(
+      animation.fromTarget,
+      animation.toTarget,
+      eased,
+    );
+    camera.lookAt(focusTarget.current);
+    targetRef.current.copy(focusTarget.current);
+
+    if (progress >= 1) {
+      focusAnimation.current = null;
+      const controls = controlsRef.current;
+      if (controls) {
+        controls.target.copy(animation.toTarget);
+        controls.enabled = mode === "orbit";
+        controls.update();
+      }
+    }
+  });
+
   return (
     <OrbitControls
       ref={controlsRef}
@@ -989,12 +1554,57 @@ function CameraRig({
       enableDamping
       minDistance={0.5}
       maxDistance={12}
+      mouseButtons={ORBIT_MOUSE_BUTTONS}
+      zoomToCursor={zoomToCursor}
       onChange={() => {
         if (controlsRef.current) {
           targetRef.current.copy(controlsRef.current.target);
         }
       }}
     />
+  );
+}
+
+function WalkTargetMarker({ target }: { target: Vector3 | null }) {
+  const groupRef = useRef<Group>(null);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    const pulse = 1 + Math.sin(clock.elapsedTime * 5) * 0.08;
+    groupRef.current.scale.setScalar(pulse);
+  });
+
+  if (!target) return null;
+
+  return (
+    <group
+      ref={groupRef}
+      position={[target.x, 0.04, target.z]}
+      renderOrder={21}
+    >
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
+        <ringGeometry args={[0.14, 0.19, 32]} />
+        <meshBasicMaterial
+          color="#ffd166"
+          transparent
+          opacity={0.85}
+          depthTest={false}
+          depthWrite={false}
+          side={DoubleSide}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
+        <circleGeometry args={[0.05, 24]} />
+        <meshBasicMaterial
+          color="#ffe29a"
+          transparent
+          opacity={0.55}
+          depthTest={false}
+          depthWrite={false}
+          side={DoubleSide}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -1152,7 +1762,11 @@ function ModelScene({
 
   return (
     <group>
-      <group position={[0, 1.1, 0]} rotation={rotation}>
+      <group
+        name="spatial-content"
+        position={[0, 1.1, 0]}
+        rotation={rotation}
+      >
         <primitive object={object} />
       </group>
       <gridHelper args={[6, 12, "#333", "#222"]} position={[0, 0.01, 0]} />

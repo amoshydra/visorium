@@ -1,11 +1,13 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Euler, Vector3 } from "three";
+import { Euler, Plane, Raycaster, Vector2, Vector3 } from "three";
+import { SPEED_RANGE, isEditableTarget } from "./settings.js";
 
 export type NavigationMode = "orbit" | "walk";
 
@@ -19,8 +21,12 @@ export type MoveInputRef = { current: MoveInput };
 
 const SPRINT_MULTIPLIER = 2.5;
 const LOOK_SPEED = 0.0035;
-const WHEEL_STEP = 0.0025;
 const MAX_PITCH = Math.PI * 0.47;
+const TAP_MOVE_THRESHOLD = 8;
+const TAP_MAX_DISTANCE = 30;
+const WALK_TARGET_STOP = 0.06;
+const WHEEL_SPEED_THRESHOLD = 100;
+const FLOOR_PLANE = new Plane(new Vector3(0, 1, 0), 0);
 const Y_AXIS = new Vector3(0, 1, 0);
 const UP = new Vector3(0, 1, 0);
 const FORWARD = new Vector3(0, 0, -1);
@@ -49,26 +55,61 @@ export function WalkControls({
   resetToken,
   speed,
   lookSensitivity,
+  stayGrounded,
+  tapToWalk,
+  onSpeedChange,
+  onWalkTarget,
 }: {
   active: boolean;
   moveRef: MoveInputRef;
   resetToken: number;
   speed: number;
   lookSensitivity: number;
+  stayGrounded: boolean;
+  tapToWalk: boolean;
+  onSpeedChange?: (speed: number) => void;
+  onWalkTarget?: (target: Vector3 | null) => void;
 }) {
   const { camera, gl } = useThree();
   const yaw = useRef(0);
   const pitch = useRef(0);
   const dragging = useRef(false);
+  const activePointerId = useRef<number | null>(null);
   const lastPointer = useRef({ x: 0, y: 0 });
+  const tapStart = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    time: number;
+    moved: boolean;
+  } | null>(null);
   const keys = useRef(new Set<string>());
   const direction = useRef(new Vector3());
   const forward = useRef(new Vector3());
   const right = useRef(new Vector3());
+  const speedRef = useRef(speed);
+  const wheelAccumulator = useRef(0);
+  const lockedHeight = useRef<number | null>(null);
+  const walkTarget = useRef<Vector3 | null>(null);
+
+  const clearWalkTarget = useCallback(() => {
+    if (!walkTarget.current) return;
+    walkTarget.current = null;
+    onWalkTarget?.(null);
+  }, [onWalkTarget]);
+
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
 
   useEffect(() => {
     keys.current.clear();
     dragging.current = false;
+    activePointerId.current = null;
+    tapStart.current = null;
+    clearWalkTarget();
+    lockedHeight.current = null;
+    wheelAccumulator.current = 0;
 
     if (!active) return;
 
@@ -77,7 +118,19 @@ export function WalkControls({
     pitch.current = euler.x;
     camera.rotation.order = "YXZ";
     camera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
-  }, [active, camera, resetToken]);
+
+    if (stayGrounded) {
+      lockedHeight.current = camera.position.y;
+      moveRef.current.vertical = 0;
+    }
+  }, [
+    active,
+    camera,
+    clearWalkTarget,
+    moveRef,
+    resetToken,
+    stayGrounded,
+  ]);
 
   useEffect(() => {
     if (!active) return;
@@ -90,12 +143,19 @@ export function WalkControls({
         event.metaKey ||
         event.ctrlKey ||
         event.altKey ||
+        isEditableTarget(event.target) ||
         !MOVEMENT_KEYS.has(event.code)
       ) {
         return;
       }
 
       pressedKeys.add(event.code);
+      if (
+        event.code !== "ShiftLeft" &&
+        event.code !== "ShiftRight"
+      ) {
+        clearWalkTarget();
+      }
       if (event.code.startsWith("Arrow")) {
         event.preventDefault();
       }
@@ -105,30 +165,89 @@ export function WalkControls({
       pressedKeys.delete(event.code);
     };
 
-    const handleBlur = () => pressedKeys.clear();
+    const handleBlur = () => {
+      pressedKeys.clear();
+      dragging.current = false;
+      activePointerId.current = null;
+      tapStart.current = null;
+      clearWalkTarget();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        handleBlur();
+      }
+    };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibility);
       pressedKeys.clear();
     };
-  }, [active]);
+  }, [active, clearWalkTarget]);
 
   useEffect(() => {
     if (!active) return;
 
     const canvas = gl.domElement;
+    const raycaster = new Raycaster();
+    const pointer = new Vector2();
+
+    const setTargetFromTap = (clientX: number, clientY: number) => {
+      if (!tapToWalk) return;
+
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      pointer.set(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, camera);
+
+      const target = new Vector3();
+      if (!raycaster.ray.intersectPlane(FLOOR_PLANE, target)) {
+        return;
+      }
+      if (target.distanceTo(camera.position) > TAP_MAX_DISTANCE) {
+        return;
+      }
+
+      const dx = target.x - camera.position.x;
+      const dz = target.z - camera.position.z;
+      if (Math.hypot(dx, dz) > 0.01) {
+        yaw.current = Math.atan2(-dx, -dz);
+        camera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
+      }
+
+      walkTarget.current = target.clone();
+      onWalkTarget?.(target.clone());
+    };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
+      if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 2) {
+        return;
+      }
+      if (activePointerId.current !== null) return;
 
+      activePointerId.current = event.pointerId;
       dragging.current = true;
       lastPointer.current = { x: event.clientX, y: event.clientY };
+      tapStart.current = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now(),
+        moved: event.pointerType === "mouse" && event.button === 2,
+      };
+
       try {
         canvas.setPointerCapture(event.pointerId);
       } catch {
@@ -137,7 +256,16 @@ export function WalkControls({
     };
 
     const handlePointerMove = (event: PointerEvent) => {
-      if (!dragging.current) return;
+      if (event.pointerId !== activePointerId.current) return;
+
+      const tap = tapStart.current;
+      if (
+        tap?.pointerId === event.pointerId &&
+        Math.hypot(event.clientX - tap.x, event.clientY - tap.y) >
+          TAP_MOVE_THRESHOLD
+      ) {
+        tap.moved = true;
+      }
 
       const dx = event.clientX - lastPointer.current.x;
       const dy = event.clientY - lastPointer.current.y;
@@ -153,8 +281,12 @@ export function WalkControls({
       camera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
     };
 
-    const handlePointerEnd = (event: PointerEvent) => {
+    const endPointer = (event: PointerEvent) => {
+      if (event.pointerId !== activePointerId.current) return;
+
+      activePointerId.current = null;
       dragging.current = false;
+      tapStart.current = null;
       try {
         canvas.releasePointerCapture(event.pointerId);
       } catch {
@@ -162,36 +294,102 @@ export function WalkControls({
       }
     };
 
-    const handleWheel = (event: WheelEvent) => {
-      if (event.deltaY === 0) return;
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerId !== activePointerId.current) return;
 
-      forward.current
-        .copy(FORWARD)
-        .applyAxisAngle(Y_AXIS, yaw.current);
-      camera.position.addScaledVector(
-        forward.current,
-        -event.deltaY * WHEEL_STEP * speed,
-      );
+      const tap = tapStart.current;
+      const isLeftClick =
+        event.pointerType !== "mouse" || event.button === 0;
+      if (
+        tap &&
+        tap.pointerId === event.pointerId &&
+        !tap.moved &&
+        isLeftClick &&
+        performance.now() - tap.time < 500
+      ) {
+        setTargetFromTap(event.clientX, event.clientY);
+      }
+
+      endPointer(event);
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      endPointer(event);
+    };
+
+    const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0 || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      event.preventDefault();
+      const delta =
+        event.deltaY *
+        (event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? 100
+            : 1);
+      wheelAccumulator.current += delta;
+
+      const steps = Math.trunc(
+        wheelAccumulator.current / WHEEL_SPEED_THRESHOLD,
+      );
+      if (steps === 0) {
+        return;
+      }
+
+      wheelAccumulator.current -= steps * WHEEL_SPEED_THRESHOLD;
+      const current = speedRef.current;
+      const next = clamp(
+        current - steps * SPEED_RANGE.step,
+        SPEED_RANGE.min,
+        SPEED_RANGE.max,
+      );
+      speedRef.current = next;
+      onSpeedChange?.(next);
     };
 
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointermove", handlePointerMove);
-    canvas.addEventListener("pointerup", handlePointerEnd);
-    canvas.addEventListener("pointercancel", handlePointerEnd);
-    canvas.addEventListener("lostpointercapture", handlePointerEnd);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointercancel", handlePointerCancel);
+    canvas.addEventListener("lostpointercapture", handlePointerCancel);
+    canvas.addEventListener("contextmenu", handleContextMenu);
     canvas.addEventListener("wheel", handleWheel, { passive: false });
 
     return () => {
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointermove", handlePointerMove);
-      canvas.removeEventListener("pointerup", handlePointerEnd);
-      canvas.removeEventListener("pointercancel", handlePointerEnd);
-      canvas.removeEventListener("lostpointercapture", handlePointerEnd);
+      canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("pointercancel", handlePointerCancel);
+      canvas.removeEventListener("lostpointercapture", handlePointerCancel);
+      canvas.removeEventListener("contextmenu", handleContextMenu);
       canvas.removeEventListener("wheel", handleWheel);
       dragging.current = false;
+      activePointerId.current = null;
+      tapStart.current = null;
     };
-  }, [active, camera, gl, lookSensitivity, speed]);
+  }, [
+    active,
+    camera,
+    clearWalkTarget,
+    gl,
+    lookSensitivity,
+    onSpeedChange,
+    onWalkTarget,
+    tapToWalk,
+  ]);
+
+  useEffect(() => {
+    if (!active || !tapToWalk) {
+      clearWalkTarget();
+    }
+  }, [active, clearWalkTarget, tapToWalk]);
 
   useFrame((_, rawDelta) => {
     if (!active) return;
@@ -208,15 +406,35 @@ export function WalkControls({
       (isPressed("KeyD") || isPressed("ArrowRight") ? 1 : 0) -
       (isPressed("KeyA") || isPressed("ArrowLeft") ? 1 : 0) +
       input.strafe;
-    const verticalInput =
-      (isPressed("KeyE") ? 1 : 0) - (isPressed("KeyQ") ? 1 : 0) +
-      input.vertical;
+    const verticalInput = stayGrounded
+      ? 0
+      : (isPressed("KeyE") ? 1 : 0) -
+        (isPressed("KeyQ") ? 1 : 0) +
+        input.vertical;
+    const hasManualInput =
+      Math.abs(forwardInput) > 0.001 ||
+      Math.abs(strafeInput) > 0.001 ||
+      Math.abs(verticalInput) > 0.001;
 
-    if (
-      Math.abs(forwardInput) < 0.001 &&
-      Math.abs(strafeInput) < 0.001 &&
-      Math.abs(verticalInput) < 0.001
-    ) {
+    if (hasManualInput) {
+      clearWalkTarget();
+    } else if (walkTarget.current) {
+      const target = walkTarget.current;
+      const dx = target.x - camera.position.x;
+      const dz = target.z - camera.position.z;
+      const distance = Math.hypot(dx, dz);
+
+      if (distance <= WALK_TARGET_STOP) {
+        clearWalkTarget();
+      } else {
+        const step = Math.min(distance, speed * delta);
+        camera.position.x += (dx / distance) * step;
+        camera.position.z += (dz / distance) * step;
+      }
+    } else {
+      if (stayGrounded && lockedHeight.current !== null) {
+        camera.position.y = lockedHeight.current;
+      }
       return;
     }
 
@@ -240,6 +458,10 @@ export function WalkControls({
       direction.current,
       speed * sprint * delta,
     );
+
+    if (stayGrounded && lockedHeight.current !== null) {
+      camera.position.y = lockedHeight.current;
+    }
   });
 
   return null;
@@ -248,6 +470,7 @@ export function WalkControls({
 export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
   const padRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  const activePointerId = useRef<number | null>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
 
   const update = (clientX: number, clientY: number) => {
@@ -270,22 +493,51 @@ export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
     moveRef.current.forward = -y;
   };
 
-  const stop = () => {
+  const stop = useCallback(() => {
     dragging.current = false;
+    activePointerId.current = null;
     moveRef.current.strafe = 0;
     moveRef.current.forward = 0;
     setKnob({ x: 0, y: 0 });
-  };
+  }, [moveRef]);
+
+  useEffect(() => {
+    const input = moveRef.current;
+    const handleBlur = () => stop();
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      input.strafe = 0;
+      input.forward = 0;
+    };
+  }, [moveRef, stop]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
+    if (dragging.current) return;
+
     dragging.current = true;
+    activePointerId.current = event.pointerId;
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
       // Pointer capture is not available in every browser.
     }
     update(event.clientX, event.clientY);
+  };
+
+  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerId !== activePointerId.current) return;
+    stop();
   };
 
   return (
@@ -295,7 +547,7 @@ export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
       aria-label="Walk movement joystick"
       style={{
         position: "absolute",
-        right: 12,
+        left: 12,
         bottom: "max(12px, env(safe-area-inset-bottom))",
         zIndex: 3,
         width: 96,
@@ -309,11 +561,16 @@ export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={(event) => {
-        if (dragging.current) update(event.clientX, event.clientY);
+        if (
+          dragging.current &&
+          event.pointerId === activePointerId.current
+        ) {
+          update(event.clientX, event.clientY);
+        }
       }}
-      onPointerUp={stop}
-      onPointerCancel={stop}
-      onLostPointerCapture={stop}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onLostPointerCapture={handlePointerEnd}
     >
       <div
         aria-hidden="true"
@@ -341,6 +598,27 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
 
   const release = () => setVertical(0);
 
+  useEffect(() => {
+    const input = moveRef.current;
+    const release = () => {
+      input.vertical = 0;
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        release();
+      }
+    };
+
+    window.addEventListener("blur", release);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("blur", release);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      input.vertical = 0;
+    };
+  }, [moveRef]);
+
   const buttonStyle = {
     width: 44,
     height: 44,
@@ -357,9 +635,11 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
 
   return (
     <div
+      aria-label="Walk height controls"
+      role="group"
       style={{
         position: "absolute",
-        right: 116,
+        right: 12,
         bottom: "max(12px, env(safe-area-inset-bottom))",
         zIndex: 3,
         display: "flex",
@@ -384,6 +664,7 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
         onPointerUp={release}
         onPointerCancel={release}
         onPointerLeave={release}
+        onLostPointerCapture={release}
       >
         ↑
       </button>
@@ -404,6 +685,7 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
         onPointerUp={release}
         onPointerCancel={release}
         onPointerLeave={release}
+        onLostPointerCapture={release}
       >
         ↓
       </button>

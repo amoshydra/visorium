@@ -134,7 +134,11 @@ export default function SplatScene({
     <>
       <primitive object={spark} />
       {ready ? (
-        <group position={[0, 1.1, 0]} rotation={rotation}>
+        <group
+          name="spatial-content"
+          position={[0, 1.1, 0]}
+          rotation={rotation}
+        >
           <primitive object={splat} />
         </group>
       ) : null}
