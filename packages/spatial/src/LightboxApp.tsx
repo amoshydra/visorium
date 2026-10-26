@@ -13,7 +13,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
-import { Box3, Vector3 } from "three";
+import { Box3, DoubleSide, Vector3 } from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
   WalkControls,
@@ -30,6 +30,8 @@ const ORIENTATION_STEP = 90;
 const DEG_TO_RAD = Math.PI / 180;
 const STORAGE_PREFIX = "visorium:spatial-view:";
 const SETTINGS_STORAGE_KEY = "visorium:spatial-settings:v1";
+const DEFAULT_Z_UP_STORAGE_KEY = "visorium:spatial-default-zup:v1";
+const TRANSITION_FLASH_MS = 1_600;
 const DEFAULT_WALK_SETTINGS = {
   speed: 0.8,
   lookSensitivity: 0.6,
@@ -63,7 +65,7 @@ interface Orientation {
 
 interface StoredView {
   mode?: NavigationMode;
-  orientation: Orientation;
+  orientation: Orientation | null;
 }
 
 interface WalkSettings {
@@ -72,8 +74,8 @@ interface WalkSettings {
 }
 
 const ZERO_ORIENTATION: Orientation = { x: 0, y: 0, z: 0 };
-const SPEED_RANGE = { min: 0.3, max: 2.5, step: 0.1 };
-const LOOK_RANGE = { min: 0.25, max: 1.5, step: 0.05 };
+const SPEED_RANGE = { min: 0.1, max: 2.5, step: 0.1 };
+const LOOK_RANGE = { min: 0.1, max: 1.5, step: 0.05 };
 
 const modelPattern = /\.(glb|gltf)$/i;
 const splatPattern = /\.(splat|ksplat|spz|ply|sogs)$/i;
@@ -119,11 +121,11 @@ const readOrientation = (value: unknown): Orientation => {
 const readStoredView = (key: string): StoredView => {
   try {
     const raw = window.localStorage.getItem(key);
-    if (!raw) return { orientation: { ...ZERO_ORIENTATION } };
+    if (!raw) return { orientation: null };
 
     const value = JSON.parse(raw) as unknown;
     if (!value || typeof value !== "object") {
-      return { orientation: { ...ZERO_ORIENTATION } };
+      return { orientation: null };
     }
 
     const candidate = value as Record<string, unknown>;
@@ -131,10 +133,12 @@ const readStoredView = (key: string): StoredView => {
       mode: candidate.mode === "walk" || candidate.mode === "orbit"
         ? candidate.mode
         : undefined,
-      orientation: readOrientation(candidate.orientation),
+      orientation: candidate.orientation
+        ? readOrientation(candidate.orientation)
+        : null,
     };
   } catch {
-    return { orientation: { ...ZERO_ORIENTATION } };
+    return { orientation: null };
   }
 };
 
@@ -187,6 +191,22 @@ const writeWalkSettings = (settings: WalkSettings) => {
   }
 };
 
+const readDefaultZUp = () => {
+  try {
+    return window.localStorage.getItem(DEFAULT_Z_UP_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const writeDefaultZUp = (enabled: boolean) => {
+  try {
+    window.localStorage.setItem(DEFAULT_Z_UP_STORAGE_KEY, enabled ? "1" : "0");
+  } catch {
+    // Storage can be unavailable in private browsing or when full.
+  }
+};
+
 const controlButtonStyle = (active = false) => ({
   minHeight: 44,
   padding: "0 12px",
@@ -210,15 +230,19 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
     [media.name, media.mtime],
   );
   const [storedView] = useState(() => readStoredView(storageKey));
+  const [zUpDefault, setZUpDefault] = useState(readDefaultZUp);
   const [status, setStatus] = useState<string | null>(() =>
     getLoadingStatus(kind),
   );
   const [resetToken, setResetToken] = useState(0);
   const [hintVisible, setHintVisible] = useState(true);
   const [coarsePointer, setCoarsePointer] = useState(false);
-  const [orientation, setOrientation] = useState<Orientation>(
-    () => storedView.orientation,
-  );
+  const isPly = /\.ply$/i.test(media.name);
+  const [orientation, setOrientation] = useState<Orientation>(() => {
+    if (storedView.orientation) return storedView.orientation;
+    if (isPly && zUpDefault) return { ...ZERO_ORIENTATION, x: 270 };
+    return { ...ZERO_ORIENTATION };
+  });
   const [mode, setMode] = useState<NavigationMode>(
     () => storedView.mode ?? "orbit",
   );
@@ -226,6 +250,9 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [walkSettings, setWalkSettings] =
     useState<WalkSettings>(readWalkSettings);
+  const [guideTarget, setGuideTarget] = useState<Vector3 | null>(null);
+  const previousMode = useRef<NavigationMode | null>(null);
+  const orbitTargetRef = useRef(new Vector3(0, 1.1, 0));
   const moveRef = useRef<MoveInput>({
     forward: 0,
     strafe: 0,
@@ -263,6 +290,33 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   useEffect(() => {
     writeWalkSettings(walkSettings);
   }, [walkSettings]);
+
+  useEffect(() => {
+    writeDefaultZUp(zUpDefault);
+  }, [zUpDefault]);
+
+  useEffect(() => {
+    const previous = previousMode.current;
+    previousMode.current = mode;
+
+    if (previous === null || previous === mode) return;
+
+    let hideTimeout: number | undefined;
+    const frame = requestAnimationFrame(() => {
+      setGuideTarget(orbitTargetRef.current.clone());
+      hideTimeout = window.setTimeout(
+        () => setGuideTarget(null),
+        TRANSITION_FLASH_MS,
+      );
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      if (hideTimeout !== undefined) {
+        window.clearTimeout(hideTimeout);
+      }
+    };
+  }, [mode]);
 
   useEffect(() => {
     const query = window.matchMedia("(pointer: coarse)");
@@ -407,7 +461,12 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         <ambientLight intensity={1.5} />
         <directionalLight position={[4, 6, 5]} intensity={2.2} />
         <hemisphereLight args={["#ffffff", "#242424", 1.2]} />
-        <CameraRig kind={kind} mode={mode} resetToken={resetToken} />
+        <CameraRig
+          kind={kind}
+          mode={mode}
+          resetToken={resetToken}
+          targetRef={orbitTargetRef}
+        />
         <WalkControls
           active={mode === "walk"}
           moveRef={moveRef}
@@ -433,6 +492,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             )}
           </Suspense>
         </SceneErrorBoundary>
+        <TransitionGuide target={guideTarget} />
       </Canvas>
 
       {status && (
@@ -625,6 +685,28 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           >
             Z-up → Y-up (X 270°)
           </button>
+          {isPly && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 8,
+                color: "#aaa",
+                fontSize: 11,
+                lineHeight: 1.35,
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={zUpDefault}
+                onChange={(event) => setZUpDefault(event.target.checked)}
+                style={{ accentColor: "#6ea8fe" }}
+              />
+              Default new PLY files to Z-up
+            </label>
+          )}
           <button
             type="button"
             onClick={resetOrientation}
@@ -846,10 +928,12 @@ function CameraRig({
   kind,
   mode,
   resetToken,
+  targetRef,
 }: {
   kind: RenderableKind;
   mode: NavigationMode;
   resetToken: number;
+  targetRef: { current: Vector3 };
 }) {
   const { camera } = useThree();
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
@@ -863,13 +947,14 @@ function CameraRig({
     camera.position.copy(position);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
+    targetRef.current.copy(target);
 
     const controls = controlsRef.current;
     if (controls) {
       controls.target.copy(target);
       controls.update();
     }
-  }, [camera, kind, resetToken]);
+  }, [camera, kind, resetToken, targetRef]);
 
   useEffect(() => {
     if (mode !== "orbit") return;
@@ -891,8 +976,9 @@ function CameraRig({
     controls.target
       .copy(camera.position)
       .addScaledVector(forward, distance);
+    targetRef.current.copy(controls.target);
     controls.update();
-  }, [camera, kind, mode]);
+  }, [camera, kind, mode, targetRef]);
 
   return (
     <OrbitControls
@@ -903,7 +989,70 @@ function CameraRig({
       enableDamping
       minDistance={0.5}
       maxDistance={12}
+      onChange={() => {
+        if (controlsRef.current) {
+          targetRef.current.copy(controlsRef.current.target);
+        }
+      }}
     />
+  );
+}
+
+function TransitionGuide({ target }: { target: Vector3 | null }) {
+  if (!target) return null;
+
+  return (
+    <group>
+      <mesh
+        position={[target.x, 0.012, target.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        renderOrder={20}
+      >
+        <planeGeometry args={[6, 6]} />
+        <meshBasicMaterial
+          color="#5b8fca"
+          transparent
+          opacity={0.07}
+          depthWrite={false}
+        />
+      </mesh>
+      <gridHelper
+        args={[6, 12, "#5b8fca", "#26384d"]}
+        position={[target.x, 0.02, target.z]}
+      />
+      {target.y > 0.02 && (
+        <mesh
+          position={[target.x, target.y / 2, target.z]}
+          renderOrder={20}
+        >
+          <cylinderGeometry args={[0.008, 0.008, target.y, 8]} />
+          <meshBasicMaterial
+            color="#7fb6ef"
+            transparent
+            opacity={0.55}
+            depthTest={false}
+          />
+        </mesh>
+      )}
+      <mesh position={[target.x, target.y, target.z]} renderOrder={20}>
+        <sphereGeometry args={[0.06, 16, 16]} />
+        <meshBasicMaterial color="#ffe29a" depthTest={false} />
+      </mesh>
+      <mesh
+        position={[target.x, target.y, target.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        renderOrder={20}
+      >
+        <ringGeometry args={[0.14, 0.17, 32]} />
+        <meshBasicMaterial
+          color="#ffd166"
+          transparent
+          opacity={0.95}
+          side={DoubleSide}
+          depthTest={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
