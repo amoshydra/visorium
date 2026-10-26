@@ -6,6 +6,7 @@ import {
   lazy,
   useEffect,
   useMemo,
+  useState,
   type ErrorInfo,
   type ReactNode,
 } from "react";
@@ -42,12 +43,19 @@ const getKind = (name: string): MediaKind => {
 
 export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const kind = getKind(media.name);
+  const [splatStatus, setSplatStatus] = useState<string | null>(
+    kind === "splat" ? "Loading splat…" : null,
+  );
 
   useEffect(() => {
     if (kind === "unsupported") {
       onError?.(`Unsupported 3D format: ${media.name}`);
     }
   }, [kind, media.name, onError]);
+
+  useEffect(() => {
+    setSplatStatus(kind === "splat" ? "Loading splat…" : null);
+  }, [kind, media.src]);
 
   if (kind === "unsupported") {
     return null;
@@ -82,7 +90,11 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             {kind === "model" ? (
               <ModelScene src={media.src} />
             ) : (
-              <SplatScene src={media.src} />
+              <SplatScene
+                src={media.src}
+                onStatus={setSplatStatus}
+                onError={onError}
+              />
             )}
           </Suspense>
         </SceneErrorBoundary>
@@ -95,6 +107,22 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           target={[0, 1.15, 0]}
         />
       </Canvas>
+      {splatStatus && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "grid",
+            placeItems: "center",
+            color: "#ccc",
+            fontFamily: "system-ui, sans-serif",
+            fontSize: 13,
+            pointerEvents: "none",
+          }}
+        >
+          {splatStatus}
+        </div>
+      )}
       <div
         style={{
           position: "absolute",
