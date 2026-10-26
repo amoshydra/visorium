@@ -19,12 +19,14 @@ double-click, or `R`). Switching back to Orbit preserves the current Walk view
 and orbits around a point in front of the camera. Walk supports drag look,
 `W/A/S/D` movement, `Q/E` height, scroll movement, and touch joystick/height
 controls for architecture captures. Walk speed and look sensitivity are
-adjustable from the gear button and are remembered across files.
+adjustable from the gear button and are remembered across files. Mode
+transitions briefly show the navigation plane and the orbit point.
 
 View orientation can be rotated in 90° steps; orientation and navigation mode
 are remembered per file in browser storage. The Z-up preset applies the common
-`X 270°` (`-90°`) correction for captures exported in a Z-up frame. Large
-splats report loading progress; failed loads show a retry. PLY files do not
+`X 270°` (`-90°`) correction for captures exported in a Z-up frame; new PLY
+files can optionally use that orientation by default. Large splats report
+loading progress; failed loads show a retry. PLY files do not
 contain standard viewer origin, up-axis, or navigation metadata, so orientation
 is a viewer-side adjustment. Gyro look, 360 media controls, and richer XR
 controls are pending.
