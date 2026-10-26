@@ -13,10 +13,17 @@ It contains an initial lazy-loaded viewer for:
 - 360/180 captures detected by filename
 - an `Enter VR` control when WebXR is supported
 
-The flat lightbox exposes orbit, pinch/wheel zoom, two-finger or right-drag
-pan, and a reset control (button, double-click, or `R`). Large splats report
-loading progress; failed loads show a retry. Splat walk mode, gyro look, 360
-media controls, and richer XR controls are pending.
+The flat lightbox exposes Orbit and Walk navigation. Orbit supports pinch/wheel
+zoom, two-finger/right-drag screen-space pan, and a reset control (button,
+double-click, or `R`). Walk supports drag look, `W/A/S/D` movement, `Q/E`
+height, scroll movement, and touch joystick/height controls for architecture
+captures. View orientation can be rotated in 90° steps; orientation and
+navigation mode are remembered per file in browser storage.
+
+Large splats report loading progress; failed loads show a retry. PLY files do
+not contain standard viewer origin, up-axis, or navigation metadata, so
+orientation is a viewer-side adjustment. Gyro look, 360 media controls, and
+richer XR controls are pending.
 The viewer is shipped as an experimental add-on until it has been validated on
 physical headsets.
 

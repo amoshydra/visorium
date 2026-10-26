@@ -5,6 +5,7 @@ import { Vector3 } from "three";
 
 export interface SplatSceneProps {
   src: string;
+  rotation: [number, number, number];
   onStatus?: (status: string | null) => void;
   onError?: (message: string) => void;
 }
@@ -19,6 +20,7 @@ export interface SplatSceneProps {
  */
 export default function SplatScene({
   src,
+  rotation,
   onStatus,
   onError,
 }: SplatSceneProps) {
@@ -104,7 +106,7 @@ export default function SplatScene({
         splat.scale.setScalar(scale);
         splat.position.set(
           -center.x * scale,
-          -center.y * scale + 1.1,
+          -center.y * scale,
           -center.z * scale,
         );
         setReady(true);
@@ -131,7 +133,11 @@ export default function SplatScene({
   return (
     <>
       <primitive object={spark} />
-      {ready ? <primitive object={splat} /> : null}
+      {ready ? (
+        <group position={[0, 1.1, 0]} rotation={rotation}>
+          <primitive object={splat} />
+        </group>
+      ) : null}
     </>
   );
 }
