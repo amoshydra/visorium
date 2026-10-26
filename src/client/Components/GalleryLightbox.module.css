@@ -72,6 +72,19 @@
     white-space: nowrap;
 }
 
+.spatialBadge {
+    flex: none;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid #34455e;
+    border-radius: 999px;
+    background: #151d28;
+    color: #9cc4ff;
+    font-family: monospace;
+    font-size: 0.625rem;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+}
+
 .close {
     margin-left: auto;
     padding: 0.35rem 0.6rem;
@@ -230,6 +243,34 @@
     margin-left: auto;
 }
 
+.footerNav {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.footerNavButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid #333;
+    border-radius: 50%;
+    background: #1a1a1a;
+    color: #ddd;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.footerNavButton:hover {
+    background: #242424;
+    color: #fff;
+}
+
 .shareButton {
     padding: 0.25rem 0.55rem;
     border: 1px solid #333;
@@ -257,6 +298,7 @@
 
 .close:focus-visible,
 .navButton:focus-visible,
+.footerNavButton:focus-visible,
 .openOriginal:focus-visible {
     outline: 2px solid #6ea8fe;
     outline-offset: 2px;
@@ -312,6 +354,15 @@
     }
 
     .navButton:active {
+        background: #2a2a2a;
+    }
+
+    .footerNavButton {
+        width: 44px;
+        height: 44px;
+    }
+
+    .footerNavButton:active {
         background: #2a2a2a;
     }
 

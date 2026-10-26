@@ -13,8 +13,10 @@ It contains an initial lazy-loaded viewer for:
 - 360/180 captures detected by filename
 - an `Enter VR` control when WebXR is supported
 
-The flat lightbox exposes orbit, pinch/wheel zoom, and two-finger pan. Splat
-walk mode, gyro look, 360 media controls, and richer XR controls are pending.
+The flat lightbox exposes orbit, pinch/wheel zoom, two-finger or right-drag
+pan, and a reset control (button, double-click, or `R`). Large splats report
+loading progress; failed loads show a retry. Splat walk mode, gyro look, 360
+media controls, and richer XR controls are pending.
 The viewer is shipped as an experimental add-on until it has been validated on
 physical headsets.
 

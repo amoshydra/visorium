@@ -49,6 +49,8 @@ export const GalleryLightbox = ({
   const previewWidth =
     viewportWidth <= 900 ? MOBILE_PREVIEW_WIDTH : PREVIEW_WIDTH;
   const isOpen = file !== null;
+  const fileKind = file ? getMediaKind(file.name) : null;
+  const isSpatial = fileKind === "model" || fileKind === "splat";
   const index = file
     ? files.findIndex((candidate) => candidate.name === file.name)
     : -1;
@@ -194,6 +196,11 @@ export const GalleryLightbox = ({
             <span className={css.title} title={file?.name}>
               {basename}
             </span>
+            {isSpatial && (
+              <span className={css.spatialBadge} aria-hidden="true">
+                {fileKind === "model" ? "3D" : "SPLAT"}
+              </span>
+            )}
             <span className={css.position}>{position}</span>
           </div>
           <button type="button" className={css.close} onClick={close}>
@@ -236,6 +243,11 @@ const LightboxContent = ({
 }: LightboxContentProps) => {
   const kind = getMediaKind(file.name);
   const isSpatial = isSpatialFile(file);
+  const extension = file.name.split(".").pop()?.toUpperCase();
+  const spatialLabel = kind === "model" ? "3D model" : "Splat";
+  const spatialMetadata = extension
+    ? `${spatialLabel} · ${extension}`
+    : spatialLabel;
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const previewSrc = file.thumbSrc
     ? toThumbnailUrl(
@@ -376,7 +388,7 @@ const LightboxContent = ({
           />
         )}
 
-        {total > 1 && (
+        {total > 1 && !isSpatial && (
           <>
             <button
               type="button"
@@ -399,10 +411,38 @@ const LightboxContent = ({
       </div>
 
       <footer className={css.footer}>
-        <span>{formatDimensions(dimensions?.width, dimensions?.height)}</span>
+        <span>
+          {isSpatial
+            ? spatialMetadata
+            : formatDimensions(dimensions?.width, dimensions?.height)}
+        </span>
         <span>{formatBytes(file.size)}</span>
         <span>{formatDate(file.mtime)}</span>
         <div className={css.footerActions}>
+          {isSpatial && total > 1 && (
+            <div
+              className={css.footerNav}
+              role="group"
+              aria-label="File navigation"
+            >
+              <button
+                type="button"
+                className={css.footerNavButton}
+                aria-label="Previous file"
+                onClick={() => onNavigate(-1)}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className={css.footerNavButton}
+                aria-label="Next file"
+                onClick={() => onNavigate(1)}
+              >
+                ›
+              </button>
+            </div>
+          )}
           {canShare && (
             <button
               type="button"
