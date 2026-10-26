@@ -31,9 +31,12 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     lib: {
-      entry: resolve(__dirname, "src/index.tsx"),
+      entry: {
+        index: resolve(__dirname, "src/index.tsx"),
+        lightbox: resolve(__dirname, "src/lightbox.tsx"),
+      },
       formats: ["es"],
-      fileName: "index",
+      fileName: (_format, entryName) => `${entryName}.js`,
     },
   },
 });

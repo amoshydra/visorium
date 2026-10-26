@@ -87,7 +87,6 @@ export function ImageGallery() {
       if (kind === "model" || kind === "splat") {
         if (spatialBase) {
           setActiveFile(file);
-          setSpatialOpen(true);
         } else {
           setInstallPromptOpen(true);
         }
@@ -242,6 +241,7 @@ export function ImageGallery() {
       <GalleryLightbox
         files={visibleFiles}
         file={spatialOpen ? null : activeFile}
+        spatialBase={spatialBase}
         onNavigate={setActiveFile}
         onClose={closeFile}
       />

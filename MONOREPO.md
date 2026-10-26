@@ -11,6 +11,8 @@ spatial/VR support in a separate workspace package.
 ├── packages/
 │   └── spatial/                  # @visorium/spatial optional add-on
 │       ├── src/
+│       │   ├── index.tsx         # spatial gallery / XR entry
+│       │   └── lightbox.tsx      # flat-screen 3D lightbox entry
 │       ├── vite.config.ts
 │       └── dist/                 # optional spatial/VR browser assets
 ├── pnpm-workspace.yaml

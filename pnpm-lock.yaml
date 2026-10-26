@@ -121,6 +121,9 @@ importers:
       '@react-three/xr':
         specifier: ^6.6.32
         version: 6.6.32(@react-three/fiber@9.8.2(@types/react@19.1.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(three@0.186.1))(@types/react@19.1.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(three@0.186.1)
+      '@sparkjsdev/spark':
+        specifier: ^2.4.0
+        version: 2.4.0(three@0.186.1)
       '@types/node':
         specifier: ^22.14.1
         version: 22.14.1
@@ -975,6 +978,11 @@ packages:
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
+
+  '@sparkjsdev/spark@2.4.0':
+    resolution: {integrity: sha512-aUjgBfhwDRcF3nUwiAD6Nh7IwvxEmW9liz2qrAXIm2BlPYBmn81QbXIpGFLBSr/o0TKGvEXbNIsKujgPGV/7QQ==}
+    peerDependencies:
+      three: '>=0.180.0'
 
   '@swc/core-darwin-arm64@1.11.21':
     resolution: {integrity: sha512-v6gjw9YFWvKulCw3ZA1dY+LGMafYzJksm1mD4UZFZ9b36CyHFowYVYug1ajYRIRqEvvfIhHUNV660zTLoVFR8g==}
@@ -3314,6 +3322,10 @@ snapshots:
     optional: true
 
   '@socket.io/component-emitter@3.1.2': {}
+
+  '@sparkjsdev/spark@2.4.0(three@0.186.1)':
+    dependencies:
+      three: 0.186.1
 
   '@swc/core-darwin-arm64@1.11.21':
     optional: true
