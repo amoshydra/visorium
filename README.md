@@ -49,8 +49,8 @@ architecture-style captures and true depth movement (`W/A/S/D`, `Q/E` height,
 or the left touch joystick). The mouse wheel adjusts walk speed, with a speed
 readout, and Shift sprints. The viewer settings button adjusts speed, look
 sensitivity, zoom-to-cursor, height locking, and optional tap-to-walk. Orbit
-picks up the current Walk view and orbits around the point in front of the
-camera; switching modes briefly shows the navigation plane and orbit point.
+picks up the current Walk view and orbits around a nearby point in front of
+the camera; switching modes briefly shows the navigation plane and orbit point.
 Rotate orientation in 90° steps when a capture is lying on its side; the Z-up
 preset applies the common `X 270°` fix, and new PLY files can optionally
 default to Z-up. Walk is free-fly and has no collision detection.

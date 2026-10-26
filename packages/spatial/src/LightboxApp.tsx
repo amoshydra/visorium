@@ -50,6 +50,9 @@ const ORIENTATION_STEP = 90;
 const DEG_TO_RAD = Math.PI / 180;
 const FOCUS_DURATION = 220;
 const FOCUS_OBJECT_NAME = "spatial-content";
+const WALK_TO_ORBIT_MIN_DISTANCE = 0.35;
+const WALK_TO_ORBIT_MAX_DISTANCE = 1;
+const WALK_TO_ORBIT_DISTANCE_FACTOR = 0.25;
 const STORAGE_PREFIX = "visorium:spatial-view:";
 const SETTINGS_STORAGE_KEY = "visorium:spatial-settings:v1";
 const DEFAULT_Z_UP_STORAGE_KEY = "visorium:spatial-default-zup:v1";
@@ -1324,15 +1327,18 @@ function CameraRig({
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // Preserve the view when returning from Walk: orbit around a point in
-    // front of the current camera instead of snapping back to the origin.
+    // Preserve the view when returning from Walk. The content is normalized
+    // to roughly two world units, so the pivot must stay close to the camera;
+    // a distance based on the model center can put the pivot outside an
+    // interior and make it feel like the orbit is around the whole building.
     const forward = new Vector3();
     camera.getWorldDirection(forward);
     const center =
       kind === "model" ? new Vector3(0, 1.05, 0) : new Vector3(0, 1.15, 0);
-    const distance = Math.min(
-      6,
-      Math.max(2, camera.position.distanceTo(center)),
+    const distance = MathUtils.clamp(
+      camera.position.distanceTo(center) * WALK_TO_ORBIT_DISTANCE_FACTOR,
+      WALK_TO_ORBIT_MIN_DISTANCE,
+      WALK_TO_ORBIT_MAX_DISTANCE,
     );
 
     controls.target
@@ -1552,7 +1558,7 @@ function CameraRig({
       enabled={mode === "orbit"}
       enablePan
       enableDamping
-      minDistance={0.5}
+      minDistance={0.2}
       maxDistance={12}
       mouseButtons={ORBIT_MOUSE_BUTTONS}
       zoomToCursor={zoomToCursor}
@@ -1615,6 +1621,7 @@ function TransitionGuide({
   target: Vector3 | null;
   onComplete: () => void;
 }) {
+  const { camera } = useThree();
   const groupRef = useRef<Group>(null);
   const elapsed = useRef(0);
   const completed = useRef(false);
@@ -1673,6 +1680,15 @@ function TransitionGuide({
 
   if (!target) return null;
 
+  // Keep the pivot gizmo readable at any orbit radius. A fixed world-size
+  // marker becomes enormous when the nearby indoor pivot is only a fraction
+  // of a unit from the camera.
+  const markerScale = MathUtils.clamp(
+    camera.position.distanceTo(target) / 2,
+    0.2,
+    1,
+  );
+
   return (
     <group ref={groupRef}>
       <mesh
@@ -1697,7 +1713,14 @@ function TransitionGuide({
           position={[target.x, target.y / 2, target.z]}
           renderOrder={20}
         >
-          <cylinderGeometry args={[0.008, 0.008, target.y, 8]} />
+          <cylinderGeometry
+            args={[
+              0.008 * markerScale,
+              0.008 * markerScale,
+              target.y,
+              8,
+            ]}
+          />
           <meshBasicMaterial
             color="#7fb6ef"
             transparent
@@ -1706,13 +1729,18 @@ function TransitionGuide({
           />
         </mesh>
       )}
-      <mesh position={[target.x, target.y, target.z]} renderOrder={20}>
+      <mesh
+        position={[target.x, target.y, target.z]}
+        scale={markerScale}
+        renderOrder={20}
+      >
         <sphereGeometry args={[0.06, 16, 16]} />
         <meshBasicMaterial color="#ffe29a" depthTest={false} />
       </mesh>
       <mesh
         position={[target.x, target.y, target.z]}
         rotation={[-Math.PI / 2, 0, 0]}
+        scale={markerScale}
         renderOrder={20}
       >
         <ringGeometry args={[0.14, 0.17, 32]} />
