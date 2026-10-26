@@ -9,7 +9,7 @@ spatial/VR support in a separate workspace package.
 ├── src/
 ├── dist/                         # core browser bundle; no Three/Spark
 ├── packages/
-│   └── spatial/                  # @visorium/spatial (private for now)
+│   └── spatial/                  # @visorium/spatial optional add-on
 │       ├── src/
 │       ├── vite.config.ts
 │       └── dist/                 # optional spatial/VR browser assets
@@ -90,9 +90,11 @@ pnpm build:all      # both
 ## Release
 
 The release workflow uses `release-please-config.json` and
-`.release-please-manifest.json`. It creates one release PR for the linked
-`visorium` and `visorium-spatial` components and publishes both with npm
-trusted publishing.
+`.release-please-manifest.json` in single-package mode. The repository root is
+the one release unit; release-please uses `extra-files` to keep
+`packages/spatial/package.json` at the same version as the root package.
+Releases produce one tag such as `v1.1.1`, and the workflow publishes both npm
+packages with npm trusted publishing.
 
 The release job publishes the spatial package first, then the core package:
 
@@ -106,10 +108,10 @@ publisher-validation window.
 
 ## Version policy
 
-All published packages use lockstep versions. `release-please` uses
-`linked-versions` to force the group to one version and `node-workspace` to
-update internal dependency and peer ranges.
+All published packages use lockstep versions. `release-please` treats the root
+package as the only release unit and updates the spatial package version through
+`extra-files`. There is no separate spatial release PR, tag, or independent
+version history.
 
-`pnpm test:versions` verifies package versions, the release-please manifest,
-and the linked components before a release. Add a spatial peer range when the
-package becomes publishable.
+`pnpm test:versions` verifies package versions, the release-please manifest, and
+the spatial `extra-files` configuration before a release.

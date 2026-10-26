@@ -1,5 +1,8 @@
 # Changelog
 
+> Historical: after 1.1.0, `@visorium/spatial` follows the root Visorium release
+> version and changelog.
+
 ## [1.1.0](https://github.com/amoshydra/visorium/compare/visorium-spatial-v1.0.0...visorium-spatial-v1.1.0) (2026-10-25)
 
 

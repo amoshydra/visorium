@@ -1,28 +1,16 @@
 {
   "release-type": "node",
-  "separate-pull-requests": false,
   "packages": {
     ".": {
       "component": "visorium",
-      "include-component-in-tag": false
-    },
-    "packages/spatial": {
-      "component": "visorium-spatial"
-    }
-  },
-  "plugins": [
-    {
-      "type": "node-workspace",
-      "merge": false,
-      "updatePeerDependencies": true
-    },
-    {
-      "type": "linked-versions",
-      "groupName": "visorium",
-      "components": [
-        "visorium",
-        "visorium-spatial"
+      "include-component-in-tag": false,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "packages/spatial/package.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
-  ]
+  }
 }

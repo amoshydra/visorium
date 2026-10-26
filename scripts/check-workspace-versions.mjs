@@ -22,27 +22,45 @@ if (manifest["."] !== version) {
   );
 }
 
-if (manifest["packages/spatial"] !== version) {
+if (manifest["packages/spatial"] !== undefined) {
   errors.push(
-    `release-please manifest spatial is ${manifest["packages/spatial"]}, expected ${version}`,
+    "release-please manifest should not configure packages/spatial separately",
   );
 }
 
-if (!config.packages?.["."]) {
+const rootConfig = config.packages?.["."];
+
+if (!rootConfig) {
   errors.push("release-please config is missing the root package");
 }
 
-if (!config.packages?.["packages/spatial"]) {
-  errors.push("release-please config is missing packages/spatial");
+if (config.packages?.["packages/spatial"]) {
+  errors.push(
+    "release-please config should not configure packages/spatial separately",
+  );
 }
 
-const components = config.plugins?.find(
-  (plugin) => plugin.type === "linked-versions",
-)?.components;
+const extraFiles = rootConfig?.["extra-files"];
+const spatialVersionFile = Array.isArray(extraFiles)
+  ? extraFiles.find(
+      (file) =>
+        typeof file === "object" &&
+        file !== null &&
+        file.type === "json" &&
+        file.path === "packages/spatial/package.json" &&
+        file.jsonpath === "$.version",
+    )
+  : undefined;
 
-for (const component of ["visorium", "visorium-spatial"]) {
-  if (!components?.includes(component)) {
-    errors.push(`linked-versions is missing ${component}`);
+if (!spatialVersionFile) {
+  errors.push(
+    "release-please config must update packages/spatial/package.json version",
+  );
+}
+
+for (const plugin of config.plugins ?? []) {
+  if (plugin.type === "linked-versions" || plugin.type === "node-workspace") {
+    errors.push(`release-please should not use the ${plugin.type} plugin`);
   }
 }
 
