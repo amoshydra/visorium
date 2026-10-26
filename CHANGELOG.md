@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.1](https://github.com/amoshydra/visorium/compare/v1.1.0...v1.1.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **release:** synchronize packages as one release unit ([8e4be55](https://github.com/amoshydra/visorium/commit/8e4be55c976f9e53e1733ea1ad9f2332dbaaa374))
+* throttle watcher activity logging ([92db31b](https://github.com/amoshydra/visorium/commit/92db31bbe0895dd671282a9a4d817c8ee6fcf0b9))
+
+
+### Reverts
+
+* undo core-only 1.1.1 release ([70fe311](https://github.com/amoshydra/visorium/commit/70fe311bba56e7e37f3f919356d29c013eac3221))
+
 ## [1.1.0](https://github.com/amoshydra/visorium/compare/v1.0.0...v1.1.0) (2026-10-25)
 
 
