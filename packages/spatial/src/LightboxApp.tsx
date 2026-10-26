@@ -1,5 +1,5 @@
 import { OrbitControls, useGLTF } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Component,
   Suspense,
@@ -13,7 +13,14 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
-import { Box3, DoubleSide, Vector3 } from "three";
+import {
+  Box3,
+  DoubleSide,
+  Vector3,
+  type Group,
+  type Material,
+  type Mesh,
+} from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
   WalkControls,
@@ -31,7 +38,9 @@ const DEG_TO_RAD = Math.PI / 180;
 const STORAGE_PREFIX = "visorium:spatial-view:";
 const SETTINGS_STORAGE_KEY = "visorium:spatial-settings:v1";
 const DEFAULT_Z_UP_STORAGE_KEY = "visorium:spatial-default-zup:v1";
-const TRANSITION_FLASH_MS = 1_600;
+const GUIDE_FADE_IN = 0.15;
+const GUIDE_HOLD = 0.45;
+const GUIDE_FADE_OUT = 1.3;
 const DEFAULT_WALK_SETTINGS = {
   speed: 0.8,
   lookSensitivity: 0.6,
@@ -260,6 +269,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   });
 
   const clearStatus = useCallback(() => setStatus(null), []);
+  const clearGuide = useCallback(() => setGuideTarget(null), []);
   const handleError = useCallback(
     (message: string) => {
       setStatus(null);
@@ -301,21 +311,11 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
 
     if (previous === null || previous === mode) return;
 
-    let hideTimeout: number | undefined;
     const frame = requestAnimationFrame(() => {
       setGuideTarget(orbitTargetRef.current.clone());
-      hideTimeout = window.setTimeout(
-        () => setGuideTarget(null),
-        TRANSITION_FLASH_MS,
-      );
     });
 
-    return () => {
-      cancelAnimationFrame(frame);
-      if (hideTimeout !== undefined) {
-        window.clearTimeout(hideTimeout);
-      }
-    };
+    return () => cancelAnimationFrame(frame);
   }, [mode]);
 
   useEffect(() => {
@@ -492,7 +492,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             )}
           </Suspense>
         </SceneErrorBoundary>
-        <TransitionGuide target={guideTarget} />
+        <TransitionGuide target={guideTarget} onComplete={clearGuide} />
       </Canvas>
 
       {status && (
@@ -998,11 +998,73 @@ function CameraRig({
   );
 }
 
-function TransitionGuide({ target }: { target: Vector3 | null }) {
+function TransitionGuide({
+  target,
+  onComplete,
+}: {
+  target: Vector3 | null;
+  onComplete: () => void;
+}) {
+  const groupRef = useRef<Group>(null);
+  const elapsed = useRef(0);
+  const completed = useRef(false);
+
+  useEffect(() => {
+    elapsed.current = 0;
+    completed.current = false;
+  }, [target]);
+
+  useFrame((_, delta) => {
+    if (!target || completed.current) return;
+
+    elapsed.current += Math.min(delta, 0.1);
+    const fadeInEnd = GUIDE_FADE_IN;
+    const holdEnd = fadeInEnd + GUIDE_HOLD;
+    const total = holdEnd + GUIDE_FADE_OUT;
+    const fade =
+      elapsed.current < fadeInEnd
+        ? elapsed.current / fadeInEnd
+        : elapsed.current < holdEnd
+          ? 1
+          : Math.max(0, 1 - (elapsed.current - holdEnd) / GUIDE_FADE_OUT);
+
+    groupRef.current?.traverse((object) => {
+      const mesh = object as Mesh;
+      if (!mesh.material) return;
+
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material];
+      for (const material of materials) {
+        const candidate = material as Material & {
+          opacity: number;
+          transparent: boolean;
+          needsUpdate: boolean;
+          userData: { baseOpacity?: number };
+        };
+
+        if (candidate.userData.baseOpacity === undefined) {
+          candidate.userData.baseOpacity = candidate.opacity;
+        }
+        if (!candidate.transparent) {
+          candidate.transparent = true;
+          candidate.needsUpdate = true;
+        }
+        candidate.opacity =
+          (candidate.userData.baseOpacity ?? 1) * fade;
+      }
+    });
+
+    if (elapsed.current >= total) {
+      completed.current = true;
+      onComplete();
+    }
+  });
+
   if (!target) return null;
 
   return (
-    <group>
+    <group ref={groupRef}>
       <mesh
         position={[target.x, 0.012, target.z]}
         rotation={[-Math.PI / 2, 0, 0]}
