@@ -29,12 +29,16 @@ export const SpatialLightboxViewer = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     let handle: { destroy: () => void } | null = null;
     const container = containerRef.current;
     if (!container) return;
+
+    setLoading(true);
+    setError(null);
 
     const mount = async () => {
       try {
@@ -48,7 +52,10 @@ export const SpatialLightboxViewer = ({
           container,
           media: file,
           onError: (message) => {
-            if (!cancelled) setError(message);
+            if (!cancelled) {
+              setError(message);
+              setLoading(false);
+            }
           },
         });
         setLoading(false);
@@ -67,10 +74,17 @@ export const SpatialLightboxViewer = ({
       handle?.destroy();
       container.innerHTML = "";
     };
-  }, [assetsBase, file]);
+  }, [assetsBase, attempt, file]);
+
+  const retry = () => {
+    setError(null);
+    setLoading(true);
+    setAttempt((current) => current + 1);
+  };
 
   return (
     <div
+      aria-busy={loading}
       style={{
         position: "relative",
         width: "100%",
@@ -83,9 +97,12 @@ export const SpatialLightboxViewer = ({
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
       {loading && (
         <div
+          role="status"
+          aria-live="polite"
           style={{
             position: "absolute",
             inset: 0,
+            zIndex: 5,
             display: "grid",
             placeItems: "center",
             color: "#bbb",
@@ -99,11 +116,15 @@ export const SpatialLightboxViewer = ({
       )}
       {error && (
         <div
+          role="alert"
+          aria-atomic="true"
           style={{
             position: "absolute",
             inset: 0,
+            zIndex: 10,
             display: "grid",
             placeItems: "center",
+            gap: 12,
             padding: 24,
             color: "#f5b5b5",
             background: "#0b0b0b",
@@ -112,7 +133,23 @@ export const SpatialLightboxViewer = ({
             textAlign: "center",
           }}
         >
-          {error}
+          <p style={{ margin: 0, maxWidth: "42rem" }}>{error}</p>
+          <button
+            type="button"
+            onClick={retry}
+            style={{
+              minHeight: 44,
+              padding: "0 16px",
+              borderRadius: 6,
+              border: "1px solid #5a3a3a",
+              background: "#241717",
+              color: "#f5d0d0",
+              font: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            Try again
+          </button>
         </div>
       )}
     </div>

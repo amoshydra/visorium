@@ -34,6 +34,8 @@ export default function SplatScene({
   useEffect(() => {
     let active = true;
     setReady(false);
+    setSpark(null);
+    setSplat(null);
     onStatus?.("Preparing splat…");
 
     const frame = requestAnimationFrame(() => {
@@ -45,6 +47,7 @@ export default function SplatScene({
           url: src,
           withCredentials: true,
           onProgress: (event) => {
+            if (!active) return;
             if (event.lengthComputable && event.total > 0) {
               const percent = Math.min(
                 99,
@@ -61,11 +64,10 @@ export default function SplatScene({
         setSpark(nextSpark);
         setSplat(nextSplat);
       } catch (error) {
+        console.error("Splat renderer initialization failed", error);
         onStatus?.(null);
         onError?.(
-          `Could not initialize splat rendering: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          "Could not initialize the splat viewer. This browser may not support the required WebGL features.",
         );
       }
     });
@@ -110,11 +112,10 @@ export default function SplatScene({
       })
       .catch((error: unknown) => {
         if (!active) return;
+        console.error("Splat loading failed", error);
         onStatus?.(null);
         onError?.(
-          `Could not load splat: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          "Could not load this splat. The file may be damaged or use an unsupported format.",
         );
       });
 

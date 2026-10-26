@@ -41,9 +41,10 @@ npx -p visorium -p @visorium/spatial visorium vr
 ```
 
 GLB models and splats can also be opened directly from the flat gallery. They
-render in the normal lightbox with touch orbit, zoom, and pan controls. WebXR
-requires a secure context; use `https` or `http://localhost` when testing with a
-headset.
+render in the normal lightbox with touch orbit, zoom, and pan controls. Use the
+Reset button, double-click, or `R` to reframe the view. Large splats show their
+loading progress and failures offer a retry. WebXR requires a secure context;
+use `https` or `http://localhost` when testing with a headset.
 
 ### Network access
 
