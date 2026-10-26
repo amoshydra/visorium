@@ -17,7 +17,7 @@ The flat lightbox exposes Orbit and Walk navigation. Orbit supports pinch/wheel
 zoom, two-finger/right/middle-drag screen-space pan, Shift+scroll pan,
 double-click or double-tap focus on a point, `F` to frame the model, and a
 reset control (button or `R`). Switching back to Orbit preserves the current
-Walk view and orbits around a point in front of the camera. Walk supports drag
+Walk view and orbits around a nearby point in front of the camera. Walk supports drag
 look, `W/A/S/D` movement, `Q/E` height, and a left touch joystick with a
 right-side height rail for architecture captures. The mouse wheel adjusts walk
 speed and shows a speed readout; Shift sprints. Viewer settings cover movement
