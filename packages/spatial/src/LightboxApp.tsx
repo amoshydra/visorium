@@ -29,6 +29,11 @@ const HINT_HIDE_DELAY = 7_000;
 const ORIENTATION_STEP = 90;
 const DEG_TO_RAD = Math.PI / 180;
 const STORAGE_PREFIX = "visorium:spatial-view:";
+const SETTINGS_STORAGE_KEY = "visorium:spatial-settings:v1";
+const DEFAULT_WALK_SETTINGS = {
+  speed: 0.8,
+  lookSensitivity: 0.6,
+};
 
 export interface LightboxMedia {
   name: string;
@@ -61,7 +66,14 @@ interface StoredView {
   orientation: Orientation;
 }
 
+interface WalkSettings {
+  speed: number;
+  lookSensitivity: number;
+}
+
 const ZERO_ORIENTATION: Orientation = { x: 0, y: 0, z: 0 };
+const SPEED_RANGE = { min: 0.3, max: 2.5, step: 0.1 };
+const LOOK_RANGE = { min: 0.25, max: 1.5, step: 0.05 };
 
 const modelPattern = /\.(glb|gltf)$/i;
 const splatPattern = /\.(splat|ksplat|spz|ply|sogs)$/i;
@@ -134,6 +146,47 @@ const writeStoredView = (key: string, view: StoredView) => {
   }
 };
 
+const clampSetting = (value: unknown, min: number, max: number) =>
+  typeof value === "number" && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, value))
+    : null;
+
+const readWalkSettings = (): WalkSettings => {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_WALK_SETTINGS };
+
+    const value = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      speed:
+        clampSetting(
+          value.speed,
+          SPEED_RANGE.min,
+          SPEED_RANGE.max,
+        ) ?? DEFAULT_WALK_SETTINGS.speed,
+      lookSensitivity:
+        clampSetting(
+          value.lookSensitivity,
+          LOOK_RANGE.min,
+          LOOK_RANGE.max,
+        ) ?? DEFAULT_WALK_SETTINGS.lookSensitivity,
+    };
+  } catch {
+    return { ...DEFAULT_WALK_SETTINGS };
+  }
+};
+
+const writeWalkSettings = (settings: WalkSettings) => {
+  try {
+    window.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify(settings),
+    );
+  } catch {
+    // Storage can be unavailable in private browsing or when full.
+  }
+};
+
 const controlButtonStyle = (active = false) => ({
   minHeight: 44,
   padding: "0 12px",
@@ -170,6 +223,9 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
     () => storedView.mode ?? "orbit",
   );
   const [orientationOpen, setOrientationOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [walkSettings, setWalkSettings] =
+    useState<WalkSettings>(readWalkSettings);
   const moveRef = useRef<MoveInput>({
     forward: 0,
     strafe: 0,
@@ -203,6 +259,10 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   useEffect(() => {
     writeStoredView(storageKey, { mode, orientation });
   }, [mode, orientation, storageKey]);
+
+  useEffect(() => {
+    writeWalkSettings(walkSettings);
+  }, [walkSettings]);
 
   useEffect(() => {
     const query = window.matchMedia("(pointer: coarse)");
@@ -265,6 +325,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
     if (next === mode) return;
     moveRef.current = { forward: 0, strafe: 0, vertical: 0 };
     setMode(next);
+    setSettingsOpen(false);
     setHintVisible(true);
   };
 
@@ -278,6 +339,11 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
 
   const resetOrientation = () => {
     setOrientation({ ...ZERO_ORIENTATION });
+    setHintVisible(false);
+  };
+
+  const setUprightOrientation = () => {
+    setOrientation({ ...ZERO_ORIENTATION, x: 270 });
     setHintVisible(false);
   };
 
@@ -346,6 +412,8 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           active={mode === "walk"}
           moveRef={moveRef}
           resetToken={resetToken}
+          speed={walkSettings.speed}
+          lookSensitivity={walkSettings.lookSensitivity}
         />
         <SceneErrorBoundary onError={handleError}>
           <Suspense fallback={null}>
@@ -433,11 +501,35 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           aria-label="Rotate view"
           aria-expanded={orientationOpen}
           aria-controls="spatial-orientation-panel"
-          onClick={() => setOrientationOpen((open) => !open)}
+          onClick={() => {
+            setSettingsOpen(false);
+            setOrientationOpen((open) => !open);
+          }}
           style={controlButtonStyle(orientationOpen)}
         >
           Rotate
         </button>
+        {mode === "walk" && (
+          <button
+            type="button"
+            aria-label="Walk settings"
+            title="Walk settings"
+            aria-expanded={settingsOpen}
+            aria-controls="spatial-walk-settings-panel"
+            onClick={() => {
+              setOrientationOpen(false);
+              setSettingsOpen((open) => !open);
+            }}
+            style={{
+              ...controlButtonStyle(settingsOpen),
+              width: 44,
+              padding: 0,
+              fontSize: 15,
+            }}
+          >
+            ⚙
+          </button>
+        )}
       </div>
 
       {orientationOpen && (
@@ -524,14 +616,141 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           ))}
           <button
             type="button"
+            onClick={setUprightOrientation}
+            style={{
+              ...controlButtonStyle(false),
+              width: "100%",
+              marginBottom: 6,
+            }}
+          >
+            Z-up → Y-up (X 270°)
+          </button>
+          <button
+            type="button"
             onClick={resetOrientation}
             style={{
               ...controlButtonStyle(false),
               width: "100%",
-              marginTop: 4,
             }}
           >
             Reset orientation
+          </button>
+        </div>
+      )}
+
+      {settingsOpen && mode === "walk" && (
+        <div
+          id="spatial-walk-settings-panel"
+          role="group"
+          aria-label="Walk settings"
+          style={{
+            position: "absolute",
+            top: 64,
+            left: 12,
+            zIndex: 4,
+            width: 258,
+            maxHeight: "calc(100% - 76px)",
+            overflowY: "auto",
+            padding: 12,
+            border: "1px solid rgba(255, 255, 255, 0.18)",
+            borderRadius: 10,
+            background: "rgba(17, 17, 17, 0.94)",
+            boxShadow: "0 12px 32px rgba(0, 0, 0, 0.4)",
+            fontFamily: "system-ui, sans-serif",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 10,
+              color: "#bbb",
+              fontSize: 11,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Walk controls
+          </div>
+          <label
+            style={{
+              display: "grid",
+              gap: 6,
+              marginBottom: 12,
+              color: "#ddd",
+              fontSize: 12,
+            }}
+          >
+            <span
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <span>Move speed</span>
+              <span style={{ color: "#9cc4ff" }}>
+                {walkSettings.speed.toFixed(1)}
+              </span>
+            </span>
+            <input
+              type="range"
+              min={SPEED_RANGE.min}
+              max={SPEED_RANGE.max}
+              step={SPEED_RANGE.step}
+              value={walkSettings.speed}
+              onChange={(event) =>
+                setWalkSettings((current) => ({
+                  ...current,
+                  speed: Number(event.target.value),
+                }))
+              }
+              style={{ width: "100%", accentColor: "#6ea8fe" }}
+            />
+          </label>
+          <label
+            style={{
+              display: "grid",
+              gap: 6,
+              marginBottom: 12,
+              color: "#ddd",
+              fontSize: 12,
+            }}
+          >
+            <span
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <span>Look sensitivity</span>
+              <span style={{ color: "#9cc4ff" }}>
+                {walkSettings.lookSensitivity.toFixed(2)}×
+              </span>
+            </span>
+            <input
+              type="range"
+              min={LOOK_RANGE.min}
+              max={LOOK_RANGE.max}
+              step={LOOK_RANGE.step}
+              value={walkSettings.lookSensitivity}
+              onChange={(event) =>
+                setWalkSettings((current) => ({
+                  ...current,
+                  lookSensitivity: Number(event.target.value),
+                }))
+              }
+              style={{ width: "100%", accentColor: "#6ea8fe" }}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setWalkSettings({ ...DEFAULT_WALK_SETTINGS })}
+            style={{
+              ...controlButtonStyle(false),
+              width: "100%",
+            }}
+          >
+            Reset defaults
           </button>
         </div>
       )}
@@ -658,9 +877,20 @@ function CameraRig({
     const controls = controlsRef.current;
     if (!controls) return;
 
-    const target =
+    // Preserve the view when returning from Walk: orbit around a point in
+    // front of the current camera instead of snapping back to the origin.
+    const forward = new Vector3();
+    camera.getWorldDirection(forward);
+    const center =
       kind === "model" ? new Vector3(0, 1.05, 0) : new Vector3(0, 1.15, 0);
-    controls.target.copy(target);
+    const distance = Math.min(
+      6,
+      Math.max(2, camera.position.distanceTo(center)),
+    );
+
+    controls.target
+      .copy(camera.position)
+      .addScaledVector(forward, distance);
     controls.update();
   }, [camera, kind, mode]);
 

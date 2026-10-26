@@ -17,7 +17,6 @@ export interface MoveInput {
 
 export type MoveInputRef = { current: MoveInput };
 
-const WALK_SPEED = 1.2;
 const SPRINT_MULTIPLIER = 2.5;
 const LOOK_SPEED = 0.0035;
 const WHEEL_STEP = 0.0025;
@@ -48,10 +47,14 @@ export function WalkControls({
   active,
   moveRef,
   resetToken,
+  speed,
+  lookSensitivity,
 }: {
   active: boolean;
   moveRef: MoveInputRef;
   resetToken: number;
+  speed: number;
+  lookSensitivity: number;
 }) {
   const { camera, gl } = useThree();
   const yaw = useRef(0);
@@ -139,10 +142,11 @@ export function WalkControls({
       const dx = event.clientX - lastPointer.current.x;
       const dy = event.clientY - lastPointer.current.y;
       lastPointer.current = { x: event.clientX, y: event.clientY };
+      const lookStep = LOOK_SPEED * lookSensitivity;
 
-      yaw.current -= dx * LOOK_SPEED;
+      yaw.current -= dx * lookStep;
       pitch.current = clamp(
-        pitch.current - dy * LOOK_SPEED,
+        pitch.current - dy * lookStep,
         -MAX_PITCH,
         MAX_PITCH,
       );
@@ -166,7 +170,7 @@ export function WalkControls({
         .applyAxisAngle(Y_AXIS, yaw.current);
       camera.position.addScaledVector(
         forward.current,
-        -event.deltaY * WHEEL_STEP,
+        -event.deltaY * WHEEL_STEP * speed,
       );
       event.preventDefault();
     };
@@ -187,7 +191,7 @@ export function WalkControls({
       canvas.removeEventListener("wheel", handleWheel);
       dragging.current = false;
     };
-  }, [active, camera, gl]);
+  }, [active, camera, gl, lookSensitivity, speed]);
 
   useFrame((_, rawDelta) => {
     if (!active) return;
@@ -234,7 +238,7 @@ export function WalkControls({
         : 1;
     camera.position.addScaledVector(
       direction.current,
-      WALK_SPEED * sprint * delta,
+      speed * sprint * delta,
     );
   });
 

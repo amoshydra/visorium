@@ -15,15 +15,19 @@ It contains an initial lazy-loaded viewer for:
 
 The flat lightbox exposes Orbit and Walk navigation. Orbit supports pinch/wheel
 zoom, two-finger/right-drag screen-space pan, and a reset control (button,
-double-click, or `R`). Walk supports drag look, `W/A/S/D` movement, `Q/E`
-height, scroll movement, and touch joystick/height controls for architecture
-captures. View orientation can be rotated in 90° steps; orientation and
-navigation mode are remembered per file in browser storage.
+double-click, or `R`). Switching back to Orbit preserves the current Walk view
+and orbits around a point in front of the camera. Walk supports drag look,
+`W/A/S/D` movement, `Q/E` height, scroll movement, and touch joystick/height
+controls for architecture captures. Walk speed and look sensitivity are
+adjustable from the gear button and are remembered across files.
 
-Large splats report loading progress; failed loads show a retry. PLY files do
-not contain standard viewer origin, up-axis, or navigation metadata, so
-orientation is a viewer-side adjustment. Gyro look, 360 media controls, and
-richer XR controls are pending.
+View orientation can be rotated in 90° steps; orientation and navigation mode
+are remembered per file in browser storage. The Z-up preset applies the common
+`X 270°` (`-90°`) correction for captures exported in a Z-up frame. Large
+splats report loading progress; failed loads show a retry. PLY files do not
+contain standard viewer origin, up-axis, or navigation metadata, so orientation
+is a viewer-side adjustment. Gyro look, 360 media controls, and richer XR
+controls are pending.
 The viewer is shipped as an experimental add-on until it has been validated on
 physical headsets.
 
