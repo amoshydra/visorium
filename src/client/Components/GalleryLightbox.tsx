@@ -259,6 +259,7 @@ const LightboxContent = ({
     : file.src;
   const [imageSrc, setImageSrc] = useState(previewSrc);
   const [imageFailed, setImageFailed] = useState(false);
+  const fallbackAttempted = useRef(false);
   const [dimensions, setDimensions] = useState<{
     width: number;
     height: number;
@@ -270,10 +271,43 @@ const LightboxContent = ({
   useEffect(() => {
     setImageSrc(previewSrc);
     setImageFailed(false);
+    fallbackAttempted.current = false;
     setDimensions(null);
-  }, [previewSrc]);
+
+    if (kind !== "image") return;
+    if (previewSrc === file.src) return;
+
+    // Show the preview immediately, then upgrade to the original once it has
+    // decoded. The 1600px preview is not enough for the enlarged lightbox on
+    // large displays, but it keeps navigation instant while the full image
+    // loads.
+    let active = true;
+    const fullImage = new Image();
+    fullImage.decoding = "async";
+    fullImage.onload = () => {
+      if (active) {
+        setImageSrc(file.src);
+      }
+    };
+    fullImage.src = file.src;
+
+    return () => {
+      active = false;
+      fullImage.onload = null;
+    };
+  }, [file.src, kind, previewSrc]);
 
   const handleImageError = () => {
+    if (fallbackAttempted.current) {
+      setImageFailed(true);
+      return;
+    }
+
+    fallbackAttempted.current = true;
+    if (imageSrc !== previewSrc) {
+      setImageSrc(previewSrc);
+      return;
+    }
     if (imageSrc !== file.src) {
       setImageSrc(file.src);
       return;
@@ -387,39 +421,20 @@ const LightboxContent = ({
             }}
           />
         )}
-
-        {total > 1 && !isSpatial && (
-          <>
-            <button
-              type="button"
-              className={`${css.navButton} ${css.navPrev}`}
-              aria-label="Previous file"
-              onClick={() => onNavigate(-1)}
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className={`${css.navButton} ${css.navNext}`}
-              aria-label="Next file"
-              onClick={() => onNavigate(1)}
-            >
-              ›
-            </button>
-          </>
-        )}
       </div>
 
       <footer className={css.footer}>
-        <span>
-          {isSpatial
-            ? spatialMetadata
-            : formatDimensions(dimensions?.width, dimensions?.height)}
-        </span>
-        <span>{formatBytes(file.size)}</span>
-        <span>{formatDate(file.mtime)}</span>
+        <div className={css.footerMeta}>
+          <span>
+            {isSpatial
+              ? spatialMetadata
+              : formatDimensions(dimensions?.width, dimensions?.height)}
+          </span>
+          <span className={css.footerSize}>{formatBytes(file.size)}</span>
+          <span className={css.footerDate}>{formatDate(file.mtime)}</span>
+        </div>
         <div className={css.footerActions}>
-          {isSpatial && total > 1 && (
+          {total > 1 && (
             <div
               className={css.footerNav}
               role="group"
