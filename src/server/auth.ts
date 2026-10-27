@@ -94,9 +94,9 @@ const getBodyToken = (request: Request): string | null => {
 const getRequestToken = (request: Request): string | null => {
   return (
     getBearerToken(request.headers.authorization) ??
-    parseCookies(request.headers.cookie)[COOKIE_NAME] ??
     getQueryToken(request.originalUrl) ??
-    (request.method === "POST" ? getBodyToken(request) : null)
+    (request.method === "POST" ? getBodyToken(request) : null) ??
+    parseCookies(request.headers.cookie)[COOKIE_NAME]
   );
 };
 
@@ -243,8 +243,8 @@ export const createAuth = (token: string): Auth => {
   const authorizeSocket = (request: IncomingMessage): boolean => {
     const candidate =
       getBearerToken(request.headers.authorization) ??
-      parseCookies(request.headers.cookie)[COOKIE_NAME] ??
-      getQueryToken(request.url);
+      getQueryToken(request.url) ??
+      parseCookies(request.headers.cookie)[COOKIE_NAME];
 
     return matchesToken(candidate, token);
   };

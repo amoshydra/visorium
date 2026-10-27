@@ -105,6 +105,23 @@ test("protects the app and media, and sets a cookie on login", async (t) => {
   assert.match(await invalidLogin.text(), /Invalid token/);
 });
 
+test("query token wins over a stale cookie", async (t) => {
+  const { server, baseUrl } = await startTestServer();
+  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  const login = await fetch(`${baseUrl}/?token=${encodeURIComponent(token)}`, {
+    headers: {
+      Accept: "text/html",
+      Cookie: "visorium_token=stale-token-from-another-port",
+    },
+    redirect: "manual",
+  });
+
+  assert.equal(login.status, 302);
+  assert.equal(login.headers.get("location"), "/");
+  assert.match(login.headers.get("set-cookie") ?? "", /visorium_token=/);
+});
+
 test("accepts the login form and authenticates sockets", async (t) => {
   const { server, baseUrl } = await startTestServer();
   t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
@@ -133,5 +150,12 @@ test("accepts the login form and authenticates sockets", async (t) => {
       url: "/socket.io/?EIO=4",
     } as unknown as IncomingMessage),
     false,
+  );
+  assert.equal(
+    auth.authorizeSocket({
+      headers: { cookie: "visorium_token=stale-token-from-another-port" },
+      url: "/socket.io/?EIO=4&token=test-token-123",
+    } as unknown as IncomingMessage),
+    true,
   );
 });
