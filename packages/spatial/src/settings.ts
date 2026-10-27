@@ -2,8 +2,6 @@ export interface ViewerSettings {
   speed: number;
   lookSensitivity: number;
   zoomToCursor: boolean;
-  stayGrounded: boolean;
-  tapToWalk: boolean;
 }
 
 export const SPEED_RANGE = {
@@ -22,8 +20,6 @@ export const DEFAULT_VIEWER_SETTINGS: ViewerSettings = {
   speed: 0.8,
   lookSensitivity: 0.6,
   zoomToCursor: false,
-  stayGrounded: false,
-  tapToWalk: false,
 };
 
 export const isEditableTarget = (target: EventTarget | null) => {

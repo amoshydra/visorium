@@ -44,16 +44,16 @@ GLB models and splats can also be opened directly from the flat gallery. They
 render in the normal lightbox with touch orbit, zoom, and pan controls. Orbit
 supports right/middle-drag pan, Shift+scroll pan, and wheel zoom; double-click
 or double-tap a point to focus it, press `F` to frame the model, and use the
-Reset button or `R` to return to the initial view. Switch to Walk for
-architecture-style captures and true depth movement (`W/A/S/D`, `Q/E` height,
-or the left touch joystick). The mouse wheel adjusts walk speed, with a speed
-readout, and Shift sprints. The viewer settings button adjusts speed, look
-sensitivity, zoom-to-cursor, height locking, and optional tap-to-walk. Orbit
-picks up the current Walk view and orbits around a nearby point in front of
-the camera; switching modes briefly shows the navigation plane and orbit point.
-Rotate orientation in 90° steps when a capture is lying on its side; the Z-up
-preset applies the common `X 270°` fix, and new PLY files can optionally
-default to Z-up. Walk is free-fly and has no collision detection.
+Reset button or `R` to return to the initial view. Switch to Fly for full 3D
+movement in the direction you look (`W/A/S/D` or the left touch joystick),
+with `Q/E` and the touch altitude buttons for vertical movement. The mouse
+wheel adjusts fly speed, with a speed readout, and Shift boosts. The viewer
+settings button adjusts fly speed, look sensitivity, and zoom-to-cursor.
+Orbit picks up the current Fly view and orbits around a nearby point in front
+of the camera; switching modes briefly shows the navigation plane and orbit
+point. Rotate orientation in 90° steps when a capture is lying on its side;
+the Z-up preset applies the common `X 270°` fix, and new PLY files can
+optionally default to Z-up. Fly has no collision detection.
 Large splats show their loading progress and failures offer a retry.
 Orientation and navigation preferences are remembered per file in the browser,
 while viewer settings are remembered across files. WebXR requires a

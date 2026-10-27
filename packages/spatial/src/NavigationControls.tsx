@@ -6,10 +6,10 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Euler, Plane, Raycaster, Vector2, Vector3 } from "three";
+import { Euler, Vector3 } from "three";
 import { SPEED_RANGE, isEditableTarget } from "./settings.js";
 
-export type NavigationMode = "orbit" | "walk";
+export type NavigationMode = "orbit" | "fly";
 
 export interface MoveInput {
   forward: number;
@@ -22,14 +22,9 @@ export type MoveInputRef = { current: MoveInput };
 const SPRINT_MULTIPLIER = 2.5;
 const LOOK_SPEED = 0.0035;
 const MAX_PITCH = Math.PI * 0.47;
-const TAP_MOVE_THRESHOLD = 8;
-const TAP_MAX_DISTANCE = 30;
-const WALK_TARGET_STOP = 0.06;
 const WHEEL_SPEED_THRESHOLD = 100;
-const FLOOR_PLANE = new Plane(new Vector3(0, 1, 0), 0);
 const Y_AXIS = new Vector3(0, 1, 0);
 const UP = new Vector3(0, 1, 0);
-const FORWARD = new Vector3(0, 0, -1);
 const RIGHT = new Vector3(1, 0, 0);
 const MOVEMENT_KEYS = new Set([
   "KeyW",
@@ -49,54 +44,32 @@ const MOVEMENT_KEYS = new Set([
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
-export function WalkControls({
+export function FlyControls({
   active,
   moveRef,
   resetToken,
   speed,
   lookSensitivity,
-  stayGrounded,
-  tapToWalk,
   onSpeedChange,
-  onWalkTarget,
 }: {
   active: boolean;
   moveRef: MoveInputRef;
   resetToken: number;
   speed: number;
   lookSensitivity: number;
-  stayGrounded: boolean;
-  tapToWalk: boolean;
   onSpeedChange?: (speed: number) => void;
-  onWalkTarget?: (target: Vector3 | null) => void;
 }) {
   const { camera, gl } = useThree();
   const yaw = useRef(0);
   const pitch = useRef(0);
-  const dragging = useRef(false);
   const activePointerId = useRef<number | null>(null);
   const lastPointer = useRef({ x: 0, y: 0 });
-  const tapStart = useRef<{
-    pointerId: number;
-    x: number;
-    y: number;
-    time: number;
-    moved: boolean;
-  } | null>(null);
   const keys = useRef(new Set<string>());
   const direction = useRef(new Vector3());
   const forward = useRef(new Vector3());
   const right = useRef(new Vector3());
   const speedRef = useRef(speed);
   const wheelAccumulator = useRef(0);
-  const lockedHeight = useRef<number | null>(null);
-  const walkTarget = useRef<Vector3 | null>(null);
-
-  const clearWalkTarget = useCallback(() => {
-    if (!walkTarget.current) return;
-    walkTarget.current = null;
-    onWalkTarget?.(null);
-  }, [onWalkTarget]);
 
   useEffect(() => {
     speedRef.current = speed;
@@ -104,11 +77,7 @@ export function WalkControls({
 
   useEffect(() => {
     keys.current.clear();
-    dragging.current = false;
     activePointerId.current = null;
-    tapStart.current = null;
-    clearWalkTarget();
-    lockedHeight.current = null;
     wheelAccumulator.current = 0;
 
     if (!active) return;
@@ -118,19 +87,7 @@ export function WalkControls({
     pitch.current = euler.x;
     camera.rotation.order = "YXZ";
     camera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
-
-    if (stayGrounded) {
-      lockedHeight.current = camera.position.y;
-      moveRef.current.vertical = 0;
-    }
-  }, [
-    active,
-    camera,
-    clearWalkTarget,
-    moveRef,
-    resetToken,
-    stayGrounded,
-  ]);
+  }, [active, camera, resetToken]);
 
   useEffect(() => {
     if (!active) return;
@@ -150,12 +107,6 @@ export function WalkControls({
       }
 
       pressedKeys.add(event.code);
-      if (
-        event.code !== "ShiftLeft" &&
-        event.code !== "ShiftRight"
-      ) {
-        clearWalkTarget();
-      }
       if (event.code.startsWith("Arrow")) {
         event.preventDefault();
       }
@@ -167,10 +118,7 @@ export function WalkControls({
 
     const handleBlur = () => {
       pressedKeys.clear();
-      dragging.current = false;
-      activePointerId.current = null;
-      tapStart.current = null;
-      clearWalkTarget();
+        activePointerId.current = null;
     };
 
     const handleVisibility = () => {
@@ -191,45 +139,12 @@ export function WalkControls({
       document.removeEventListener("visibilitychange", handleVisibility);
       pressedKeys.clear();
     };
-  }, [active, clearWalkTarget]);
+  }, [active]);
 
   useEffect(() => {
     if (!active) return;
 
     const canvas = gl.domElement;
-    const raycaster = new Raycaster();
-    const pointer = new Vector2();
-
-    const setTargetFromTap = (clientX: number, clientY: number) => {
-      if (!tapToWalk) return;
-
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-
-      pointer.set(
-        ((clientX - rect.left) / rect.width) * 2 - 1,
-        -((clientY - rect.top) / rect.height) * 2 + 1,
-      );
-      raycaster.setFromCamera(pointer, camera);
-
-      const target = new Vector3();
-      if (!raycaster.ray.intersectPlane(FLOOR_PLANE, target)) {
-        return;
-      }
-      if (target.distanceTo(camera.position) > TAP_MAX_DISTANCE) {
-        return;
-      }
-
-      const dx = target.x - camera.position.x;
-      const dz = target.z - camera.position.z;
-      if (Math.hypot(dx, dz) > 0.01) {
-        yaw.current = Math.atan2(-dx, -dz);
-        camera.rotation.set(pitch.current, yaw.current, 0, "YXZ");
-      }
-
-      walkTarget.current = target.clone();
-      onWalkTarget?.(target.clone());
-    };
 
     const handlePointerDown = (event: PointerEvent) => {
       if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 2) {
@@ -238,15 +153,7 @@ export function WalkControls({
       if (activePointerId.current !== null) return;
 
       activePointerId.current = event.pointerId;
-      dragging.current = true;
       lastPointer.current = { x: event.clientX, y: event.clientY };
-      tapStart.current = {
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-        time: performance.now(),
-        moved: event.pointerType === "mouse" && event.button === 2,
-      };
 
       try {
         canvas.setPointerCapture(event.pointerId);
@@ -257,15 +164,6 @@ export function WalkControls({
 
     const handlePointerMove = (event: PointerEvent) => {
       if (event.pointerId !== activePointerId.current) return;
-
-      const tap = tapStart.current;
-      if (
-        tap?.pointerId === event.pointerId &&
-        Math.hypot(event.clientX - tap.x, event.clientY - tap.y) >
-          TAP_MOVE_THRESHOLD
-      ) {
-        tap.moved = true;
-      }
 
       const dx = event.clientX - lastPointer.current.x;
       const dy = event.clientY - lastPointer.current.y;
@@ -285,36 +183,11 @@ export function WalkControls({
       if (event.pointerId !== activePointerId.current) return;
 
       activePointerId.current = null;
-      dragging.current = false;
-      tapStart.current = null;
-      try {
+        try {
         canvas.releasePointerCapture(event.pointerId);
       } catch {
         // The pointer may already have been released.
       }
-    };
-
-    const handlePointerUp = (event: PointerEvent) => {
-      if (event.pointerId !== activePointerId.current) return;
-
-      const tap = tapStart.current;
-      const isLeftClick =
-        event.pointerType !== "mouse" || event.button === 0;
-      if (
-        tap &&
-        tap.pointerId === event.pointerId &&
-        !tap.moved &&
-        isLeftClick &&
-        performance.now() - tap.time < 500
-      ) {
-        setTargetFromTap(event.clientX, event.clientY);
-      }
-
-      endPointer(event);
-    };
-
-    const handlePointerCancel = (event: PointerEvent) => {
-      endPointer(event);
     };
 
     const handleContextMenu = (event: MouseEvent) => {
@@ -356,40 +229,23 @@ export function WalkControls({
 
     canvas.addEventListener("pointerdown", handlePointerDown);
     canvas.addEventListener("pointermove", handlePointerMove);
-    canvas.addEventListener("pointerup", handlePointerUp);
-    canvas.addEventListener("pointercancel", handlePointerCancel);
-    canvas.addEventListener("lostpointercapture", handlePointerCancel);
+    canvas.addEventListener("pointerup", endPointer);
+    canvas.addEventListener("pointercancel", endPointer);
+    canvas.addEventListener("lostpointercapture", endPointer);
     canvas.addEventListener("contextmenu", handleContextMenu);
     canvas.addEventListener("wheel", handleWheel, { passive: false });
 
     return () => {
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointermove", handlePointerMove);
-      canvas.removeEventListener("pointerup", handlePointerUp);
-      canvas.removeEventListener("pointercancel", handlePointerCancel);
-      canvas.removeEventListener("lostpointercapture", handlePointerCancel);
+      canvas.removeEventListener("pointerup", endPointer);
+      canvas.removeEventListener("pointercancel", endPointer);
+      canvas.removeEventListener("lostpointercapture", endPointer);
       canvas.removeEventListener("contextmenu", handleContextMenu);
       canvas.removeEventListener("wheel", handleWheel);
-      dragging.current = false;
-      activePointerId.current = null;
-      tapStart.current = null;
+        activePointerId.current = null;
     };
-  }, [
-    active,
-    camera,
-    clearWalkTarget,
-    gl,
-    lookSensitivity,
-    onSpeedChange,
-    onWalkTarget,
-    tapToWalk,
-  ]);
-
-  useEffect(() => {
-    if (!active || !tapToWalk) {
-      clearWalkTarget();
-    }
-  }, [active, clearWalkTarget, tapToWalk]);
+  }, [active, camera, gl, lookSensitivity, onSpeedChange]);
 
   useFrame((_, rawDelta) => {
     if (!active) return;
@@ -406,39 +262,22 @@ export function WalkControls({
       (isPressed("KeyD") || isPressed("ArrowRight") ? 1 : 0) -
       (isPressed("KeyA") || isPressed("ArrowLeft") ? 1 : 0) +
       input.strafe;
-    const verticalInput = stayGrounded
-      ? 0
-      : (isPressed("KeyE") ? 1 : 0) -
-        (isPressed("KeyQ") ? 1 : 0) +
-        input.vertical;
-    const hasManualInput =
-      Math.abs(forwardInput) > 0.001 ||
-      Math.abs(strafeInput) > 0.001 ||
-      Math.abs(verticalInput) > 0.001;
+    const verticalInput =
+      (isPressed("KeyE") ? 1 : 0) -
+      (isPressed("KeyQ") ? 1 : 0) +
+      input.vertical;
 
-    if (hasManualInput) {
-      clearWalkTarget();
-    } else if (walkTarget.current) {
-      const target = walkTarget.current;
-      const dx = target.x - camera.position.x;
-      const dz = target.z - camera.position.z;
-      const distance = Math.hypot(dx, dz);
-
-      if (distance <= WALK_TARGET_STOP) {
-        clearWalkTarget();
-      } else {
-        const step = Math.min(distance, speed * delta);
-        camera.position.x += (dx / distance) * step;
-        camera.position.z += (dz / distance) * step;
-      }
-    } else {
-      if (stayGrounded && lockedHeight.current !== null) {
-        camera.position.y = lockedHeight.current;
-      }
+    if (
+      Math.abs(forwardInput) < 0.001 &&
+      Math.abs(strafeInput) < 0.001 &&
+      Math.abs(verticalInput) < 0.001
+    ) {
       return;
     }
 
-    forward.current.copy(FORWARD).applyAxisAngle(Y_AXIS, yaw.current);
+    // Forward follows the full look direction, including pitch. Strafing
+    // stays level with the horizon; Q/E and the height buttons add altitude.
+    camera.getWorldDirection(forward.current);
     right.current.copy(RIGHT).applyAxisAngle(Y_AXIS, yaw.current);
     direction.current
       .set(0, 0, 0)
@@ -458,16 +297,12 @@ export function WalkControls({
       direction.current,
       speed * sprint * delta,
     );
-
-    if (stayGrounded && lockedHeight.current !== null) {
-      camera.position.y = lockedHeight.current;
-    }
   });
 
   return null;
 }
 
-export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
+export function FlyJoystick({ moveRef }: { moveRef: MoveInputRef }) {
   const padRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const activePointerId = useRef<number | null>(null);
@@ -544,7 +379,7 @@ export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
     <div
       ref={padRef}
       role="group"
-      aria-label="Walk movement joystick"
+      aria-label="Fly movement joystick"
       style={{
         position: "absolute",
         left: 12,
@@ -591,7 +426,7 @@ export function WalkJoystick({ moveRef }: { moveRef: MoveInputRef }) {
   );
 }
 
-export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
+export function FlyHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
   const setVertical = (value: number) => {
     moveRef.current.vertical = value;
   };
@@ -635,7 +470,7 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
 
   return (
     <div
-      aria-label="Walk height controls"
+      aria-label="Fly altitude controls"
       role="group"
       style={{
         position: "absolute",
@@ -649,8 +484,8 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
     >
       <button
         type="button"
-        aria-label="Move up"
-        title="Move up"
+        aria-label="Fly up"
+        title="Fly up"
         style={buttonStyle}
         onPointerDown={(event) => {
           event.preventDefault();
@@ -670,8 +505,8 @@ export function WalkHeightControls({ moveRef }: { moveRef: MoveInputRef }) {
       </button>
       <button
         type="button"
-        aria-label="Move down"
-        title="Move down"
+        aria-label="Fly down"
+        title="Fly down"
         style={buttonStyle}
         onPointerDown={(event) => {
           event.preventDefault();

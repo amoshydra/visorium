@@ -28,9 +28,9 @@ import {
 } from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
-  WalkControls,
-  WalkHeightControls,
-  WalkJoystick,
+  FlyControls,
+  FlyHeightControls,
+  FlyJoystick,
   type MoveInput,
   type NavigationMode,
 } from "./NavigationControls.js";
@@ -50,9 +50,9 @@ const ORIENTATION_STEP = 90;
 const DEG_TO_RAD = Math.PI / 180;
 const FOCUS_DURATION = 220;
 const FOCUS_OBJECT_NAME = "spatial-content";
-const WALK_TO_ORBIT_MIN_DISTANCE = 0.35;
-const WALK_TO_ORBIT_MAX_DISTANCE = 1;
-const WALK_TO_ORBIT_DISTANCE_FACTOR = 0.25;
+const FLY_TO_ORBIT_MIN_DISTANCE = 0.35;
+const FLY_TO_ORBIT_MAX_DISTANCE = 1;
+const FLY_TO_ORBIT_DISTANCE_FACTOR = 0.25;
 const STORAGE_PREFIX = "visorium:spatial-view:";
 const SETTINGS_STORAGE_KEY = "visorium:spatial-settings:v1";
 const DEFAULT_Z_UP_STORAGE_KEY = "visorium:spatial-default-zup:v1";
@@ -154,9 +154,13 @@ const readStoredView = (key: string): StoredView => {
 
     const candidate = value as Record<string, unknown>;
     return {
-      mode: candidate.mode === "walk" || candidate.mode === "orbit"
-        ? candidate.mode
-        : undefined,
+      // "walk" was the previous name for fly; migrate saved views.
+      mode:
+        candidate.mode === "walk" || candidate.mode === "fly"
+          ? "fly"
+          : candidate.mode === "orbit"
+            ? "orbit"
+            : undefined,
       orientation: candidate.orientation
         ? readOrientation(candidate.orientation)
         : null,
@@ -204,14 +208,6 @@ const readViewerSettings = (): ViewerSettings => {
       zoomToCursor: readBoolean(
         value.zoomToCursor,
         DEFAULT_VIEWER_SETTINGS.zoomToCursor,
-      ),
-      stayGrounded: readBoolean(
-        value.stayGrounded,
-        DEFAULT_VIEWER_SETTINGS.stayGrounded,
-      ),
-      tapToWalk: readBoolean(
-        value.tapToWalk,
-        DEFAULT_VIEWER_SETTINGS.tapToWalk,
       ),
     };
   } catch {
@@ -318,7 +314,6 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const [settings, setSettings] =
     useState<ViewerSettings>(readViewerSettings);
   const [focusToken, setFocusToken] = useState(0);
-  const [walkTarget, setWalkTarget] = useState<Vector3 | null>(null);
   const [speedNotice, setSpeedNotice] = useState<{
     speed: number;
     key: number;
@@ -337,7 +332,6 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const clearGuide = useCallback(() => setGuideTarget(null), []);
   const resetView = useCallback(() => {
     setResetToken((token) => token + 1);
-    setWalkTarget(null);
     setHintVisible(false);
   }, []);
   const focusView = useCallback(() => {
@@ -465,21 +459,17 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   }
 
   const hintText =
-    mode === "walk"
+    mode === "fly"
       ? coarsePointer
-        ? `Left joystick moves · drag to look${
-            settings.stayGrounded ? "" : " · ↑/↓ height"
-          }${settings.tapToWalk ? " · tap ground to move" : ""}`
-        : `Drag to look · W/A/S/D move${
-            settings.stayGrounded ? "" : " · Q/E height"
-          }${settings.tapToWalk ? " · click ground to walk" : ""} · scroll speed · Shift sprint`
+        ? "Left joystick flies · drag to look · ↑/↓ altitude"
+        : "Drag to look · W/A/S/D fly in look direction · Q/E altitude · scroll speed · Shift boost"
       : coarsePointer
         ? "One finger orbit · pinch to zoom · two-finger pan · double-tap to focus"
         : "Drag to orbit · scroll to zoom · right-drag or Shift+scroll to pan · double-click to focus";
 
   const hintMaxWidth = "min(32rem, calc(100% - 24px))";
   const hintBottom =
-    mode === "walk" && coarsePointer
+    mode === "fly" && coarsePointer
       ? "calc(118px + env(safe-area-inset-bottom))"
       : "max(12px, env(safe-area-inset-bottom))";
   const panelTop = coarsePointer ? 118 : 64;
@@ -488,7 +478,6 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
   const changeMode = (next: NavigationMode) => {
     if (next === mode) return;
     moveRef.current = { forward: 0, strafe: 0, vertical: 0 };
-    setWalkTarget(null);
     setMode(next);
     setSettingsOpen(false);
     setHintVisible(true);
@@ -575,16 +564,13 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           focusToken={focusToken}
           zoomToCursor={settings.zoomToCursor}
         />
-        <WalkControls
-          active={mode === "walk"}
+        <FlyControls
+          active={mode === "fly"}
           moveRef={moveRef}
           resetToken={resetToken}
           speed={settings.speed}
           lookSensitivity={settings.lookSensitivity}
-          stayGrounded={settings.stayGrounded}
-          tapToWalk={settings.tapToWalk}
           onSpeedChange={handleSpeedChange}
-          onWalkTarget={setWalkTarget}
         />
         <SceneErrorBoundary onError={handleError}>
           <Suspense fallback={null}>
@@ -604,7 +590,6 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             )}
           </Suspense>
         </SceneErrorBoundary>
-        <WalkTargetMarker target={walkTarget} />
         <TransitionGuide target={guideTarget} onComplete={clearGuide} />
       </Canvas>
 
@@ -658,16 +643,16 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
           </button>
           <button
             type="button"
-            aria-pressed={mode === "walk"}
-            onClick={() => changeMode("walk")}
+            aria-pressed={mode === "fly"}
+            onClick={() => changeMode("fly")}
             style={{
-              ...controlButtonStyle(mode === "walk"),
+              ...controlButtonStyle(mode === "fly"),
               borderTopLeftRadius: 0,
               borderBottomLeftRadius: 0,
               marginLeft: -1,
             }}
           >
-            Walk
+            Fly
           </button>
         </div>
         <button
@@ -876,7 +861,7 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
               textTransform: "uppercase",
             }}
           >
-            {mode === "orbit" ? "Orbit controls" : "Walk controls"}
+            {mode === "orbit" ? "Orbit controls" : "Fly controls"}
           </div>
 
           {mode === "orbit" ? (
@@ -912,14 +897,14 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
                     gap: 8,
                   }}
                 >
-                  <span>Move speed</span>
+                  <span>Fly speed</span>
                   <span style={settingsValueStyle}>
                     {settings.speed.toFixed(1)}×
                   </span>
                 </span>
                 <input
-                  id="spatial-walk-speed"
-                  name="walkSpeed"
+                  id="spatial-fly-speed"
+                  name="flySpeed"
                   type="range"
                   min={SPEED_RANGE.min}
                   max={SPEED_RANGE.max}
@@ -964,44 +949,9 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
                   style={{ width: "100%", accentColor: "#6ea8fe" }}
                 />
               </label>
-              <label style={settingsCheckboxStyle}>
-                <input
-                  id="spatial-lock-eye-height"
-                  name="stayGrounded"
-                  type="checkbox"
-                  checked={settings.stayGrounded}
-                  onChange={(event) => {
-                    setSettings((current) => ({
-                      ...current,
-                      stayGrounded: event.target.checked,
-                    }));
-                    setWalkTarget(null);
-                  }}
-                  style={{ accentColor: "#6ea8fe" }}
-                />
-                Lock eye height
-              </label>
               <p style={settingsNoteStyle}>
-                Stops vertical movement and keeps tap-to-walk level.
-              </p>
-              <label style={settingsCheckboxStyle}>
-                <input
-                  id="spatial-tap-to-walk"
-                  name="tapToWalk"
-                  type="checkbox"
-                  checked={settings.tapToWalk}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      tapToWalk: event.target.checked,
-                    }))
-                  }
-                  style={{ accentColor: "#6ea8fe" }}
-                />
-                Tap or click ground to walk
-              </label>
-              <p style={settingsNoteStyle}>
-                Walk is free-fly; there is no collision detection.
+                Fly moves in the direction you look. Q/E and the altitude
+                buttons change altitude. There is no collision detection.
               </p>
             </>
           )}
@@ -1010,7 +960,6 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
             type="button"
             onClick={() => {
               setSettings({ ...DEFAULT_VIEWER_SETTINGS });
-              setWalkTarget(null);
             }}
             style={{
               ...controlButtonStyle(false),
@@ -1039,9 +988,9 @@ export function LightboxApp({ media, onError, onReady }: LightboxAppProps) {
         Reset
       </button>
 
-      {mode === "walk" && coarsePointer && <WalkJoystick moveRef={moveRef} />}
-      {mode === "walk" && coarsePointer && !settings.stayGrounded && (
-        <WalkHeightControls moveRef={moveRef} />
+      {mode === "fly" && coarsePointer && <FlyJoystick moveRef={moveRef} />}
+      {mode === "fly" && coarsePointer && (
+        <FlyHeightControls moveRef={moveRef} />
       )}
 
       {speedNotice && (
@@ -1327,8 +1276,8 @@ function CameraRig({
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // Preserve the view when returning from Walk. The content is normalized
-    // to roughly two world units, so the pivot must stay close to the camera;
+    // Preserve the view when leaving Fly. The content is normalized to
+    // roughly two world units, so the pivot must stay close to the camera;
     // a distance based on the model center can put the pivot outside an
     // interior and make it feel like the orbit is around the whole building.
     const forward = new Vector3();
@@ -1336,9 +1285,9 @@ function CameraRig({
     const center =
       kind === "model" ? new Vector3(0, 1.05, 0) : new Vector3(0, 1.15, 0);
     const distance = MathUtils.clamp(
-      camera.position.distanceTo(center) * WALK_TO_ORBIT_DISTANCE_FACTOR,
-      WALK_TO_ORBIT_MIN_DISTANCE,
-      WALK_TO_ORBIT_MAX_DISTANCE,
+      camera.position.distanceTo(center) * FLY_TO_ORBIT_DISTANCE_FACTOR,
+      FLY_TO_ORBIT_MIN_DISTANCE,
+      FLY_TO_ORBIT_MAX_DISTANCE,
     );
 
     controls.target
@@ -1568,49 +1517,6 @@ function CameraRig({
         }
       }}
     />
-  );
-}
-
-function WalkTargetMarker({ target }: { target: Vector3 | null }) {
-  const groupRef = useRef<Group>(null);
-
-  useFrame(({ clock }) => {
-    if (!groupRef.current) return;
-    const pulse = 1 + Math.sin(clock.elapsedTime * 5) * 0.08;
-    groupRef.current.scale.setScalar(pulse);
-  });
-
-  if (!target) return null;
-
-  return (
-    <group
-      ref={groupRef}
-      position={[target.x, 0.04, target.z]}
-      renderOrder={21}
-    >
-      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
-        <ringGeometry args={[0.14, 0.19, 32]} />
-        <meshBasicMaterial
-          color="#ffd166"
-          transparent
-          opacity={0.85}
-          depthTest={false}
-          depthWrite={false}
-          side={DoubleSide}
-        />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={21}>
-        <circleGeometry args={[0.05, 24]} />
-        <meshBasicMaterial
-          color="#ffe29a"
-          transparent
-          opacity={0.55}
-          depthTest={false}
-          depthWrite={false}
-          side={DoubleSide}
-        />
-      </mesh>
-    </group>
   );
 }
 
