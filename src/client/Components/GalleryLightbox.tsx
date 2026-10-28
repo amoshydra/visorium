@@ -17,6 +17,7 @@ import { getMediaKind } from "../lib/media-kind";
 import { toThumbnailUrl } from "../lib/urls";
 import { MediaError } from "./MediaError";
 import { SpatialLightboxViewer } from "./SpatialLightboxViewer";
+import { ZoomableImage } from "./ZoomableImage";
 import css from "./GalleryLightbox.module.css";
 
 export interface GalleryLightboxProps {
@@ -243,6 +244,7 @@ const LightboxContent = ({
 }: LightboxContentProps) => {
   const kind = getMediaKind(file.name);
   const isSpatial = isSpatialFile(file);
+  const handlesStageSwipe = !isSpatial && kind !== "image";
   const extension = file.name.split(".").pop()?.toUpperCase();
   const spatialLabel = kind === "model" ? "3D model" : "Splat";
   const spatialMetadata = extension
@@ -352,14 +354,14 @@ const LightboxContent = ({
     <div className={css.content}>
       <div
         className={`${css.stage} ${isSpatial ? css.spatialStage : ""}`}
-        onTouchStart={isSpatial ? undefined : handleTouchStart}
-        onTouchEnd={isSpatial ? undefined : handleTouchEnd}
+        onTouchStart={handlesStageSwipe ? handleTouchStart : undefined}
+        onTouchEnd={handlesStageSwipe ? handleTouchEnd : undefined}
         onTouchCancel={
-          isSpatial
-            ? undefined
-            : () => {
+          handlesStageSwipe
+            ? () => {
                 touchStart.current = null;
               }
+            : undefined
         }
       >
         {isSpatial && spatialBase && (
@@ -374,28 +376,15 @@ const LightboxContent = ({
         )}
 
         {!isSpatial && kind === "image" && !imageFailed && (
-          <div className={css.imageStage}>
-            {file.thumbSrc && (
-              <img
-                className={css.placeholder}
-                src={file.thumbSrc}
-                alt=""
-                aria-hidden="true"
-              />
-            )}
-            <img
-              className={css.image}
-              src={imageSrc}
-              alt={file.name}
-              onLoad={({ currentTarget }) => {
-                setDimensions({
-                  width: currentTarget.naturalWidth,
-                  height: currentTarget.naturalHeight,
-                });
-              }}
-              onError={handleImageError}
-            />
-          </div>
+          <ZoomableImage
+            src={imageSrc}
+            alt={file.name}
+            placeholderSrc={file.thumbSrc}
+            onLoad={(width, height) => setDimensions({ width, height })}
+            onError={handleImageError}
+            onNavigate={onNavigate}
+            onClose={onClose}
+          />
         )}
 
         {!isSpatial && (kind === "error" || imageFailed) && (

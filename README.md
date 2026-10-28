@@ -113,7 +113,10 @@ Visorium collect all images and video files and serves them in a gallery view.
 
 For large folders, Visorium generates grid thumbnails on demand and caches them
 outside the served folder. The gallery also has a search/filter bar, folder
-filter, sort controls, and a preview lightbox.
+filter, sort controls, and a full-screen preview lightbox. Images support
+wheel and pinch zoom, drag-to-pan while zoomed, and double-click or double-tap
+zoom. Swipe navigation remains active at fit zoom; once zoomed, drags pan the
+image instead of changing files.
 
 ### Thumbnail cache
 
