@@ -25,6 +25,7 @@ const TYPE_OPTIONS: Array<{ value: MediaType; label: string }> = [
   { value: "all", label: "All" },
   { value: "image", label: "Images" },
   { value: "video", label: "Videos" },
+  { value: "3d", label: "3D" },
 ];
 
 const SORT_OPTIONS: Array<{ value: GallerySort; label: string }> = [
@@ -122,6 +123,8 @@ export const MobileFilterSheet = ({
             <span className={css.sectionLabel}>Sort</span>
             <div className={css.field}>
               <select
+                id="gallery-mobile-sort"
+                name="sort"
                 className={css.select}
                 value={state.sort}
                 aria-label="Sort files"

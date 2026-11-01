@@ -31,6 +31,14 @@ test("supports the legacy search parameter", () => {
   assert.equal(parseGalleryState("?q=cat&search=dog").query, "cat");
 });
 
+test("parses and serializes the 3D media type", () => {
+  assert.equal(parseGalleryState("?type=3d").type, "3d");
+  assert.equal(
+    serializeGalleryState({ ...DEFAULT_GALLERY_STATE, type: "3d" }),
+    "type=3d",
+  );
+});
+
 test("falls back on invalid choices", () => {
   const state = parseGalleryState(
     "?type=gif&sort=random&order=sideways&density=huge",

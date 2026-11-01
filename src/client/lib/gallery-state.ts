@@ -1,6 +1,6 @@
 export const ROOT_FOLDER = "__root__";
 
-export type MediaType = "all" | "image" | "video";
+export type MediaType = "all" | "image" | "video" | "3d";
 export type GallerySort = "discovery" | "name" | "modified" | "size";
 export type GalleryOrder = "asc" | "desc";
 export type GalleryDensity = "compact" | "comfortable" | "large";
@@ -29,7 +29,7 @@ export const DEFAULT_GALLERY_STATE: GalleryState = {
   density: "comfortable",
 };
 
-const MEDIA_TYPES: readonly MediaType[] = ["all", "image", "video"];
+const MEDIA_TYPES: readonly MediaType[] = ["all", "image", "video", "3d"];
 const SORTS: readonly GallerySort[] = [
   "discovery",
   "name",

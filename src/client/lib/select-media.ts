@@ -2,6 +2,7 @@ import type { MediaInfo } from "../hooks/useFileServerSocket.types";
 import {
   ROOT_FOLDER,
   type GalleryState,
+  type MediaType,
 } from "./gallery-state";
 import { getMediaKind } from "./media-kind";
 
@@ -83,6 +84,19 @@ export const getChildFolders = (
     }));
 };
 
+export const matchesType = (name: string, type: MediaType): boolean => {
+  if (type === "all") {
+    return true;
+  }
+
+  const kind = getMediaKind(name);
+  if (type === "3d") {
+    return kind === "model" || kind === "splat";
+  }
+
+  return kind === type;
+};
+
 export const hasActiveFilters = (state: GalleryState): boolean => {
   return state.query.trim() !== "" || state.type !== "all" || !!state.folder;
 };
@@ -96,7 +110,7 @@ export const selectMedia = (
     if (query && !file.name.toLowerCase().includes(query)) {
       return false;
     }
-    if (state.type !== "all" && getMediaKind(file.name) !== state.type) {
+    if (state.type !== "all" && !matchesType(file.name, state.type)) {
       return false;
     }
     return matchesFolder(file.name, state.folder);

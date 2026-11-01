@@ -24,6 +24,7 @@ const TYPE_OPTIONS: Array<{ value: MediaType; label: string }> = [
   { value: "all", label: "All" },
   { value: "image", label: "Images" },
   { value: "video", label: "Videos" },
+  { value: "3d", label: "3D" },
 ];
 
 const SORT_OPTIONS: Array<{ value: GallerySort; label: string }> = [
@@ -65,6 +66,8 @@ export const GalleryToolbar = ({
       <div className={css.toolbar} role="toolbar" aria-label="Gallery controls">
         <div className={css.mobileBar}>
           <input
+            id="gallery-search-mobile"
+            name="q"
             className={`${css.search} ${css.mobileSearch}`}
             type="search"
             value={state.query}
@@ -89,6 +92,8 @@ export const GalleryToolbar = ({
 
         <div className={css.desktopControls}>
           <input
+            id="gallery-search"
+            name="q"
             className={css.search}
             type="search"
             value={state.query}
@@ -115,6 +120,8 @@ export const GalleryToolbar = ({
           <label className={css.control}>
             <span>Sort</span>
             <select
+              id="gallery-sort"
+              name="sort"
               value={state.sort}
               onChange={(event) =>
                 onChange({ sort: event.target.value as GallerySort })
@@ -148,6 +155,8 @@ export const GalleryToolbar = ({
             <label className={`${css.control} ${css.folderControl}`}>
               <span>Folder</span>
               <select
+                id="gallery-folder"
+                name="folder"
                 value={state.folder}
                 title={state.folder || "All folders"}
                 onChange={(event) => onChange({ folder: event.target.value })}
@@ -165,6 +174,8 @@ export const GalleryToolbar = ({
           <label className={css.control}>
             <span>Density</span>
             <select
+              id="gallery-density"
+              name="density"
               value={state.density}
               onChange={(event) =>
                 onChange({ density: event.target.value as GalleryDensity })

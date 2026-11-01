@@ -7,6 +7,7 @@ import {
   getFolderOptions,
   hasActiveFilters,
   matchesFolder,
+  matchesType,
   selectMedia,
 } from "../src/client/lib/select-media.js";
 
@@ -58,6 +59,43 @@ test("filters by media type", () => {
     selectMedia(files, state({ type: "image" })).map((file) => file.name),
     ["b.jpg", "sub/c.jpg", "sub/deep/d.png"],
   );
+});
+
+test("filters 3D media types by model and splat kinds", () => {
+  const mixed = [
+    media("model.glb", { discovery: 1 }),
+    media("scene.ply", { discovery: 2 }),
+    media("cloud.spz", { discovery: 3 }),
+    media("photo.jpg", { discovery: 4 }),
+    media("clip.mp4", { discovery: 5 }),
+    media("notes.txt", { discovery: 6 }),
+  ];
+
+  assert.deepEqual(
+    selectMedia(mixed, state({ type: "3d" })).map((file) => file.name),
+    ["model.glb", "scene.ply", "cloud.spz"],
+  );
+  assert.deepEqual(
+    selectMedia(mixed, state({ type: "image" })).map((file) => file.name),
+    ["photo.jpg"],
+  );
+  assert.deepEqual(
+    selectMedia(mixed, state({ type: "video" })).map((file) => file.name),
+    ["clip.mp4"],
+  );
+});
+
+test("matches media types including 3D", () => {
+  assert.equal(matchesType("model.glb", "all"), true);
+  assert.equal(matchesType("photo.jpg", "all"), true);
+  assert.equal(matchesType("model.glb", "3d"), true);
+  assert.equal(matchesType("scene.ply", "3d"), true);
+  assert.equal(matchesType("photo.jpg", "3d"), false);
+  assert.equal(matchesType("clip.mp4", "3d"), false);
+  assert.equal(matchesType("notes.txt", "3d"), false);
+  assert.equal(matchesType("photo.jpg", "image"), true);
+  assert.equal(matchesType("scene.ply", "image"), false);
+  assert.equal(matchesType("clip.mp4", "video"), true);
 });
 
 test("filters by folder", () => {
