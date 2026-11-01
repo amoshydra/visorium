@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/amoshydra/visorium/compare/v1.1.1...v1.2.0) (2026-11-01)
+
+
+### Features
+
+* **client:** add 3D filter and label gallery controls ([f2b9127](https://github.com/amoshydra/visorium/commit/f2b9127ad6302b2af92c0d763e3355eecd58b192))
+
 ## [1.1.1](https://github.com/amoshydra/visorium/compare/v1.1.0...v1.1.1) (2026-10-26)
 
 
